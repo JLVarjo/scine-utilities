@@ -321,7 +321,7 @@ Crtp exp(const FirstBase<DerivativeT, Crtp>& value) {
 // deriving the cos function
 template<typename DerivativeT, typename Crtp>
 Crtp cos(const FirstBase<DerivativeT, Crtp>& value) {
-  return {std::cos(value.value()), -sin(value.value()) * value.derivatives()};
+  return {std::cos(value.value()), -std::sin(value.value()) * value.derivatives()};
 }
 
 // deriving the sin function

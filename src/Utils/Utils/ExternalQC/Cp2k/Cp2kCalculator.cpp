@@ -420,7 +420,8 @@ void Cp2kCalculator::deleteTemporaryFiles() {
       try {
         if (bfs::is_regular_file(it->status())) {
           std::smatch match;
-          if (std::regex_search(it->path().filename().string(), match, filter)) {
+          std::string s = it->path().filename().string();
+          if (std::regex_search(s, match, filter)) {
             bfs::remove(it->path());
           }
         }

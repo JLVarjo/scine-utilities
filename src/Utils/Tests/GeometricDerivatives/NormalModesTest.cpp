@@ -11,6 +11,7 @@
 #include <Utils/MolecularTrajectory.h>
 #include <gmock/gmock.h>
 #include <cmath>
+#include "../Utils/Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {

@@ -6,6 +6,7 @@
  */
 #include "Utils/GeometricDerivatives/NormalModesContainer.h"
 #include <cmath>
+#include "../MSVCCompatibility.h"
 
 namespace Scine {
 namespace Utils {

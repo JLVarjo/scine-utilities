@@ -10,6 +10,7 @@
 #include <Utils/IO/ChemicalFileFormats/XyzStreamHandler.h>
 #include <Utils/Math/MachineLearning/ChemicalRepresentations/AtomicForcesManager.h>
 #include <gmock/gmock.h>
+#include "../Utils/Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {

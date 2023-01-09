@@ -13,6 +13,7 @@
 #include <Utils/IO/ChemicalFileFormats/PdbStreamHandler.h>
 #include <Utils/IO/ChemicalFileFormats/XyzStreamHandler.h>
 #include <fstream>
+#include <memory>
 
 namespace Scine {
 namespace Utils {

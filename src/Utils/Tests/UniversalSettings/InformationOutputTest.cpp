@@ -46,7 +46,7 @@ class InformationOutputTest : public Test {
     fin.open(dummyFile.string());
     auto content = std::string(std::istreambuf_iterator<char>{fin}, {});
     fin.close();
-    int i = std::remove(dummyFile.c_str());
+    int i = std::remove(dummyFile.string().c_str());
     if (i != 0) {
       throw std::runtime_error("Could not delete file " + dummyFile.string());
     }

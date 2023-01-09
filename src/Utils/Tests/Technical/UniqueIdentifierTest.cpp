@@ -6,6 +6,7 @@
  */
 #include <Utils/Technical/UniqueIdentifier.h>
 #include <gmock/gmock.h>
+#include "../../Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {

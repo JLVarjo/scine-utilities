@@ -12,6 +12,7 @@
 #include <gmock/gmock.h>
 #include <Eigen/Eigen>
 #include <algorithm>
+#include "../Utils/Utils/MSVCCompatibility.h"
 
 using namespace testing;
 

@@ -254,7 +254,7 @@ void TurbomoleInputFileCreator::addSolvation(const Settings& settings) {
 
   // run cosmoprep
   auto directory = bp::start_dir(calculationDirectory_);
-  bp::ipstream stdout, stderr;
+  //bp::ipstream stdout, stderr;
   std::string outputFile = NativeFilenames::combinePathSegments(calculationDirectory_, "COSMO.out");
   std::string executable = NativeFilenames::combinePathSegments(turbomoleExecutableBase_, "cosmoprep");
   TurbomoleHelper helper(calculationDirectory_, turbomoleExecutableBase_);

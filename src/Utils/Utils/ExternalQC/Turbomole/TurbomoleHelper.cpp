@@ -11,7 +11,9 @@
 #include <boost/asio.hpp>
 #include <boost/process.hpp>
 #include <boost/process/async.hpp>
+#include <fstream>
 #include <regex>
+#include "../Utils/Utils/MSVCCompatibility.h"
 
 namespace Scine {
 namespace Utils {
@@ -65,12 +67,12 @@ void TurbomoleHelper::execute(std::string binaryName, bool outputToFile) {
 
 void TurbomoleHelper::execute(std::string binaryName, std::string stdInFile) {
   auto workingDir = bp::start_dir(calculationDirectory_);
-  bp::ipstream stderr;
+  bp::ipstream _stderr;
   std::string binary = NativeFilenames::combinePathSegments(turbomoleExecutableBase_, binaryName);
-  bp::child c(binary, bp::std_in<stdInFile, bp::std_out> bp::null, bp::std_err > stderr, workingDir);
+  bp::child c(binary, bp::std_in<stdInFile, bp::std_out> bp::null, bp::std_err > _stderr, workingDir);
   c.wait(); // Wait for the process to exit
 
-  bool success = jobWasSuccessful(stderr);
+  bool success = jobWasSuccessful(_stderr);
   if (!success)
     throw std::runtime_error(binaryName + " session in Turbomole failed.");
 }

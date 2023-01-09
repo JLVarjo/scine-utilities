@@ -40,9 +40,6 @@ const std::vector<OpenBabelStreamHandler::FormatSupportPair>& OpenBabelStreamHan
   boost::process::child readFormatsChild(readFormatsCallString, boost::process::std_out > readFormatsStream);
   boost::process::child writeFormatsChild(writeFormatsCallString, boost::process::std_out > writeFormatsStream);
 
-  readFormatsChild.wait();
-  writeFormatsChild.wait();
-
   // Function to parse the format string identifiers from each list
   auto parseFormats = [](std::istream& is) -> std::vector<std::string> {
     std::vector<std::string> formats;
@@ -68,6 +65,9 @@ const std::vector<OpenBabelStreamHandler::FormatSupportPair>& OpenBabelStreamHan
 
   std::vector<std::string> readFormats = parseFormats(readFormatsStream);
   std::vector<std::string> writeFormats = parseFormats(writeFormatsStream);
+
+  readFormatsChild.wait();
+  writeFormatsChild.wait();
 
   std::sort(std::begin(readFormats), std::end(readFormats));
 

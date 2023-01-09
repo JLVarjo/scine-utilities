@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/process.hpp>
+#include "../Utils/Utils/MSVCCompatibility.h"
 
 namespace bp = boost::process;
 namespace bfs = boost::filesystem;
@@ -68,7 +69,7 @@ void TurbomoleCalculator::initializeProgram() {
   const char* turboRootEnv = std::getenv("TURBODIR");
   const char* paraArchEnv = std::getenv("PARA_ARCH");
   if (paraArchEnv) {
-    unsetenv("PARA_ARCH");
+    UnsetEnv_("PARA_ARCH");
   }
   std::string archScript = NativeFilenames::combinePathSegments(turboRootEnv, "scripts", "sysname");
   if (bfs::exists(archScript)) {
@@ -92,8 +93,8 @@ void TurbomoleCalculator::initializeProgram() {
     std::stringstream temp_str;
     temp_str << numProcs;
     const std::string numProcsChar = temp_str.str();
-    setenv("PARA_ARCH", "SMP", 1);
-    setenv("PARNODES", numProcsChar.c_str(), 1);
+    SetEnv_("PARA_ARCH", "SMP");
+    SetEnv_("PARNODES", numProcsChar);
   }
 }
 

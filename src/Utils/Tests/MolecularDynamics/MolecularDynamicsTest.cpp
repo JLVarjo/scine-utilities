@@ -19,6 +19,7 @@
 #include <Eigen/Geometry>
 #include <functional>
 #include <random>
+#include "../../Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {

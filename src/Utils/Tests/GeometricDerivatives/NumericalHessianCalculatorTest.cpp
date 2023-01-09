@@ -16,6 +16,7 @@
 #include <gmock/gmock.h>
 #include <omp.h>
 #include <vector>
+#include "../../Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {
