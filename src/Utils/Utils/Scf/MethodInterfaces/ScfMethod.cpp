@@ -218,6 +218,7 @@ void ScfMethod::finalizeCalculation(Utils::Derivative d) {
   if (!basisSetIsOrthogonal()) {
     calculateEnergyWeightedDensity();
   }
+  calculateSigmaPiDensityMatrix();
 }
 
 void ScfMethod::setScfMixer(scf_mixer_t mixer) {

@@ -58,7 +58,8 @@ enum class Property : unsigned {
   PointChargesGradients = (1 << 23),
   AtomicGtos = (1 << 24),
   GridOccupation = (1 << 25),
-  StressTensor = (1 << 26)
+  StressTensor = (1 << 26),
+  SigmaPiDensityMatrix = (1 << 27)
 };
 
 // clang-format off
@@ -90,11 +91,12 @@ using PropertyTypeTuple =
     GradientCollection, /*Property::PointChargesGradients*/
     std::unordered_map<int, AtomicGtos>, /*Property::AtomicGtos*/
     std::vector<int>, /*Property::GridOccupation*/
-    Eigen::Matrix3d /*Property::StressTensor*/
+    Eigen::Matrix3d, /*Property::StressTensor*/
+    Eigen::MatrixXd /*Property::SigmaPiDensityMatrix*/
     >;
 // clang-format on
 
-static_assert(std::tuple_size<PropertyTypeTuple>::value == 27,
+static_assert(std::tuple_size<PropertyTypeTuple>::value == 28,
               "Tuple does not contain as many elements as there are properties");
 
 constexpr std::array<Property, std::tuple_size<PropertyTypeTuple>::value> allProperties{{Property::Energy,
@@ -123,7 +125,8 @@ constexpr std::array<Property, std::tuple_size<PropertyTypeTuple>::value> allPro
                                                                                          Property::PointChargesGradients,
                                                                                          Property::AtomicGtos,
                                                                                          Property::GridOccupation,
-                                                                                         Property::StressTensor}};
+                                                                                         Property::StressTensor,
+                                                                                         Property::SigmaPiDensityMatrix}};
 
 // Python binding names
 constexpr std::array<const char*, std::tuple_size<PropertyTypeTuple>::value> allPropertyNames{"energy",
@@ -152,7 +155,8 @@ constexpr std::array<const char*, std::tuple_size<PropertyTypeTuple>::value> all
                                                                                               "point_charges_gradients",
                                                                                               "atomic_gtos",
                                                                                               "grid_occupation",
-                                                                                              "stress_tensor"};
+                                                                                              "stress_tensor",
+                                                                                              "sigma_pi_density_matrix"};
 
 /* other variants of doing this:
  * - Use a constexpr map datatype

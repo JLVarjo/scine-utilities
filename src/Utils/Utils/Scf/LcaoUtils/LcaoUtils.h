@@ -11,6 +11,7 @@
 #include "ElectronicOccupation.h"
 #include <Eigen/Core>
 #include <vector>
+#include <Utils/Typenames.h>
 
 namespace Scine {
 namespace Core {
@@ -78,6 +79,10 @@ void calculateOrthonormalAtomicCharges(std::vector<double>& mullikenCharges, con
 void calculateMullikenAtomicCharges(std::vector<double>& mullikenCharges, const std::vector<double>& coreCharges,
                                     const DensityMatrix& densityMatrix, const Eigen::MatrixXd& overlapMatrix,
                                     const AtomsOrbitalsIndexes& aoIndexes);
+
+void calculateSigmaPiDensityMatrix(Eigen::MatrixXd& sigmaPiDensityMatrix,
+                                     const DensityMatrix& densityMatrix, const PositionCollection& positions,
+                                     const AtomsOrbitalsIndexes& aoIndexes);
 
 } // namespace LcaoUtils
 } // namespace Utils

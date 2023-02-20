@@ -20,6 +20,7 @@
 #include <Utils/Math/IterativeDiagonalizer/IndirectPreconditionerEvaluator.h>
 #include <Utils/Math/IterativeDiagonalizer/IndirectSigmaVectorEvaluator.h>
 #include <Utils/Scf/LcaoUtils/LcaoUtils.h>
+#include <Utils/Constants.h>
 #include <Eigen/Eigenvalues>
 #include <cmath>
 #include <iostream>
@@ -271,6 +272,241 @@ void calculateMullikenAtomicCharges(std::vector<double>& mullikenCharges, const 
       }
     }
   }
+}
+
+
+/*
+ "IROT IS A MAPPING LIST. FOR EACH ELEMENT OF AROT 5 NUMBERS ARE
+ NEEDED. THESE ARE, IN ORDER, FIRST AND SECOND SUBSCRIPTS OF AROT,
+ AND FIRST,SECOND, AND THIRD SUBSCRIPTS OF C, THUS THE FIRST
+ LINE OF IROT DEFINES AROT(1,1)=C(1,3,3)"
+*/
+const Eigen::MatrixXd irot =
+    (Eigen::MatrixXd(35, 5) << 0, 0, 0, 2, 2, 1, 1, 1, 3, 2, 2, 1, 1, 1, 2, 3, 1, 1, 2, 2, 1, 2, 1, 3, 1, 2, 2, 1, 1, 1,
+     3, 2, 1, 2, 1, 1, 3, 1, 3, 3, 2, 3, 1, 1, 3, 3, 3, 1, 2, 3, 4, 4, 2, 0, 4, 5, 4, 2, 3, 2, 6, 4, 2, 2, 2, 7, 4, 2,
+     1, 2, 8, 4, 2, 4, 2, 4, 5, 2, 0, 1, 5, 5, 2, 3, 1, 6, 6, 2, 2, 1, 7, 5, 2, 1, 1, 8, 5, 2, 4, 1, 4, 6, 2, 0, 3, 5,
+     6, 2, 3, 3, 6, 6, 2, 2, 3, 7, 6, 2, 1, 3, 8, 6, 2, 4, 3, 4, 7, 2, 0, 0, 5, 7, 2, 3, 0, 6, 7, 2, 2, 0, 7, 7, 2, 1,
+     0, 8, 7, 2, 4, 0, 4, 8, 2, 0, 4, 5, 8, 2, 3, 4, 6, 8, 2, 2, 4, 7, 8, 2, 1, 4, 8, 8, 2, 4, 4)
+        .finished();
+
+const Eigen::VectorXd isp = (Eigen::VectorXd(9) << 0, 1, 2, 2, 3, 4, 4, 5, 5).finished();
+
+void coe(double x2, double y2, double z2, int nij, double& r, Eigen::VectorXd& c) {
+
+    // "COE Utility: Within the general overlap routine COE calculates the angular coefficients for the s, p and d real atomic orbitals
+    // given the axis and returns the rotation matrix. "
+
+    const double rt34 = 0.86602540378444;
+    const double rt13 = 0.57735026918963;
+    double ca, cb, sa, sb;
+    double xy = std::pow(x2, 2) + std::pow(y2, 2);
+    r = std::sqrt(xy + std::pow(z2, 2));
+    xy = std::sqrt(xy);
+    if (xy>=1e-10) {
+        ca = x2 / xy;
+        cb = z2 / r;
+        sa = y2 / xy;
+        sb = xy / r;
+    } else {
+        if (z2 <= 0.0) {
+            if (z2 != 0.0) {
+                ca = -1.0;
+                cb = -1.0;
+                sa = 0.0; 
+                sb = 0.0;
+            }
+            else{
+                ca = 0.0;
+                cb = 0.0;
+                sa = 0.0;
+                sb = 0.0;
+            }
+        }
+        else {
+          ca = 1.0; 
+          cb = 1.0; 
+          sa = 0.0; 
+          sb = 0.0; 
+        }
+    }
+    c.setZero();
+
+    double c2a, c2b, s2a, s2b;
+    c(37-1) = 1.0;
+    if (nij >= 2) {
+        c(56-1) = ca * cb;
+        c(41-1) = ca * sb;
+        c(26-1) = -sa;
+        c(53-1) = -sb;
+        c(38-1) = cb;
+        c(23-1) = 0.0;
+        c(50-1) = sa * cb;
+        c(35-1) = sa * sb;
+        c(20-1) = ca;
+        if (nij >= 5) {
+          c2a = 2 * ca * ca - 1.0;
+          c2b = 2 * cb * cb - 1.0;
+          s2a = 2 * sa * ca;
+          s2b = 2 * sb * cb;
+          c(75-1) = c2a * cb * cb + 0.5 * c2a * sb * sb;
+          c(60-1) = 0.5 * c2a * s2b;
+          c(45-1) = rt34 * c2a * sb * sb;
+          c(30-1) = -s2a * sb;
+          c(15-1) = -s2a * cb;
+          c(72-1) = -0.5 * ca * s2b;
+          c(57-1) = ca * c2b;
+          c(42-1) = rt34 * ca * s2b;
+          c(27-1) = -sa * cb;
+          c(12-1) = sa * sb;
+          c(69-1) = rt13 * sb * sb * 1.5;
+          c(54-1) = -rt34 * s2b;
+          c(39-1) = cb * cb - 0.5 * sb * sb;
+          c(66-1) = -0.5 * sa * s2b;
+          c(51-1) = sa * c2b;
+          c(36-1) = rt34 * sa * s2b;
+          c(21-1) = ca * cb;
+          c(6-1) = -ca * sb;
+          c(63-1) = s2a * cb * cb + 0.5 * s2a * sb * sb;
+          c(48-1) = 0.5 * s2a * s2b;
+          c(33-1) = rt34 * s2a * sb * sb;
+          c(18-1) = c2a * sb;
+          c(3-1) = c2a * cb;
+        }
+    }
+}
+
+void calculateSigmaPiDensityMatrix(Eigen::MatrixXd& sigmaPiDensityMatrix, const DensityMatrix& densityMatrix,
+                                     const PositionCollection& positions,
+                                     const AtomsOrbitalsIndexes& aoIndexes) {
+
+    // PORTED FROM MOPAC 7.1 (PUBLIC DOMAIN) SUBROUTINE "DENROT":
+    // "DENROT PRINTS THE DENSITY MATRIX AS(S - SIGMA, P - SIGMA, P - PI) RATHER THAN(S, PX, PY, PZ)."
+
+    // RESULTING BOND ORBITAL POPULATIONS (AS AVAILABLE) ARE IN ORDER
+    // 'S-SIGMA', 'P-SIGMA', 'P-PI', 'P-PI', 'D-SIGMA', 'D-PI ', 'D-PI ', 'D-DELL', 'D-DELL'
+    
+    // work matrices:
+    Eigen::MatrixXd pab = Eigen::MatrixXd::Zero(9, 9);
+    Eigen::MatrixXd arot = Eigen::MatrixXd::Zero(9, 9);
+    Eigen::MatrixXd vect = Eigen::MatrixXd::Zero(9, 9);
+
+    // for coe output:
+    double r;
+    Eigen::VectorXd c = Eigen::VectorXd::Zero(75);
+
+    sigmaPiDensityMatrix.setZero();
+
+    for (size_t i = 0; i < aoIndexes.getNAtoms(); i++) {
+      
+        const size_t ifirst = aoIndexes.getFirstOrbitalIndex(i);
+        const size_t inorbs = aoIndexes.getNOrbitals(i);
+        if (inorbs == 0) continue;
+
+        // Note: in the Mopac 7.1 code ipq and jpq were limited as follows:
+        // 
+        // const int ipq = std::min(std::max((int)inorbs - 2, 1), 3);
+        // 
+        // which effectively skipped the rotations of any d-orbitals.
+        // Can't see reason for this really as it seems to work.
+        // So let's just activate it and see what happens...
+        const int ipq = inorbs - 2;
+        
+        for (size_t j=0; j<i; j++) {
+
+            const size_t jfirst = aoIndexes.getFirstOrbitalIndex(j);
+            const size_t jnorbs = aoIndexes.getNOrbitals(j);
+            if (jnorbs == 0) continue;
+
+            //const int jpq = std::min(std::max(((int)jnorbs - 2), 1), 3); // see above
+            const int jpq = jnorbs - 2;
+
+            pab.setZero();
+            pab.block(0, 0, inorbs, jnorbs) = densityMatrix.restrictedMatrix().block(ifirst, jfirst, inorbs, jnorbs);
+            
+            /*std::cout << "PAB FOR i,j = " << i << "," << j << std::endl;
+            for (size_t di = 0; di < 9; di++) {
+                for (size_t dj = 0; dj < 9; dj++) {
+                    std::cout << pab.coeff(di, dj) << " ";
+                }
+                std::cout << std::endl;
+            }*/
+
+            const double delx = (positions(i, 0) - positions(j, 0)) / Constants::bohr_per_angstrom;
+            const double dely = (positions(i, 1) - positions(j, 1)) / Constants::bohr_per_angstrom;
+            const double delz = (positions(i, 2) - positions(j, 2)) / Constants::bohr_per_angstrom;
+            coe(delx, dely, delz, std::max(ipq, jpq), r, c);
+            
+            arot.setZero();
+            for (size_t i1 = 0; i1 < 35; i1++) {
+                const size_t ac = irot.coeff(i1, 0);
+                const size_t ar = irot.coeff(i1, 1);
+                const size_t ci1 = irot.coeff(i1, 2);
+                const size_t ci2 = irot.coeff(i1, 3);
+                const size_t ci3 = irot.coeff(i1, 4);
+                const size_t cidx = ci1 + ci2 * 3 + ci3 * 3 * 5;
+                arot.coeffRef(ac, ar) = c(cidx);
+            }
+
+            /*
+            std::cout << "AROT FOR i,j = " << i << "," << j << std::endl;
+            for (size_t di = 0; di < 9; di++) {
+                for (size_t dj = 0; dj < 9; dj++) {
+                    std::cout << arot.coeff(di, dj) << " ";
+                }
+                std::cout << std::endl;
+            }
+            */
+
+            vect.setZero();
+
+            const size_t maxnorbs = std::max(inorbs, jnorbs);
+            for (size_t i1 = 0; i1 < inorbs; i1++) {
+                for (size_t j1 = 0; j1 < jnorbs; j1++) {
+                    double sum = 0;
+                    for (size_t l1 = 0; l1 < maxnorbs; l1++) {
+                            for (size_t l2 = 0; l2 < maxnorbs; l2++) {
+                            sum = sum + arot.coeff(l1, i1) * pab.coeff(l1, l2) * arot.coeff(l2, j1);
+                        }
+                    }
+                    vect.coeffRef(isp.coeff(i1), isp.coeff(j1)) = vect.coeff(isp.coeff(i1), isp.coeff(j1)) + std::pow(sum, 2);
+                }
+            }
+            
+            /*
+            std::cout<< "VECT FOR i,j = " << i << "," << j << std::endl;
+            for (size_t di=0; di<9; di++){
+                for (size_t dj = 0; dj < 9; dj++) {
+                    std::cout << vect.coeff(di, dj) << " ";
+                }
+                std::cout << std::endl;           
+            }
+            */
+
+            sigmaPiDensityMatrix.block(jfirst, ifirst, jnorbs, inorbs) = vect.block(0, 0, inorbs, jnorbs).transpose();
+
+        }
+    }
+
+    // PUT ATOMIC ORBITAL VALENCIES ONTO THE DIAGONAL
+    const size_t dsize = densityMatrix.restrictedMatrix().innerSize();
+    for (size_t di = 0; di < dsize; di++) {
+        const double sumr = sigmaPiDensityMatrix.block(di, di + 1, 1, dsize - di - 1).sum();
+        const double sumc = sigmaPiDensityMatrix.block(0, di, di, 1).sum();
+        // std::cout << di + 1 << " " << di << " " << dsize - di - 1 << " sums: " << sumr << " & " << sumc << std::endl;
+        sigmaPiDensityMatrix.coeffRef(di, di) = sumr + sumc;
+    }
+
+    /*
+    std::cout << "-- RESULT MATRIX --"<< std::endl;
+    for (size_t di = 0; di < dsize; di++) {
+        for (size_t dj = 0; dj < dsize; dj++) {
+            std::cout << sigmaPiDensityMatrix.coeff(di, dj) << " ";
+        }
+        std::cout << std::endl;
+    }
+    */
+
+    return;
 }
 
 } // namespace LcaoUtils

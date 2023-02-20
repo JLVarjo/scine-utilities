@@ -77,6 +77,9 @@ class LcaoMethod : public SinglePointMethod {
   const Eigen::MatrixXd& getOverlapMatrix() const;
   void setOverlapMatrix(const Eigen::MatrixXd& S);
 
+  const Eigen::MatrixXd& getSigmaPiDensityMatrix() const;
+  void setSigmaPiDensityMatrix(const Eigen::MatrixXd& S);
+
   const SpinAdaptedMatrix& getFockMatrix() const;
   void setFockMatrix(SpinAdaptedMatrix F);
 
@@ -133,6 +136,7 @@ class LcaoMethod : public SinglePointMethod {
   void calculateEnergyWeightedDensity();
   void calculateBondOrderMatrix();
   void calculateAtomicCharges();
+  void calculateSigmaPiDensityMatrix();
   virtual void printFooter(Core::Log& log) const;
 
   Eigen::MatrixXd overlapMatrix_;
@@ -160,6 +164,8 @@ class LcaoMethod : public SinglePointMethod {
   std::shared_ptr<OverlapCalculator> overlapCalculator_;
   std::shared_ptr<ElectronicContributionCalculator> electronicPart_;
   double electronicEnergy_, repulsionEnergy_;
+
+  Eigen::MatrixXd sigmaPiDensityMatrix_;
 
  private:
   void verifyChargeValidity() const;

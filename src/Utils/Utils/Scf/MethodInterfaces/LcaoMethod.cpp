@@ -47,6 +47,16 @@ void LcaoMethod::setOverlapMatrix(const Eigen::MatrixXd& S) {
   overlapMatrix_ = S;
 }
 
+const Eigen::MatrixXd& LcaoMethod::getSigmaPiDensityMatrix() const {
+  return sigmaPiDensityMatrix_;
+}
+
+void LcaoMethod::setSigmaPiDensityMatrix(const Eigen::MatrixXd& S) {
+  assert(S.rows() == nAOs_ && S.cols() == nAOs_ &&
+         "Dimensions of given sigma-pi density matrix do not correspond to the number of atomic orbitals.");
+  sigmaPiDensityMatrix_ = S;
+}
+
 void LcaoMethod::setFockMatrix(SpinAdaptedMatrix F) {
   // assert(F.rows() == nAOs_ && F.cols() == nAOs_ && "Dimensions of given Fock matrix do not correspond to the number
   // of atomic orbitals."); TODO
@@ -113,6 +123,7 @@ void LcaoMethod::resizeLcaoMethodMatrices() {
   overlapMatrix_.resize(nAOs_, nAOs_);
   densityMatrix_.resize(nAOs_);
   energyWeightedDensityMatrix_.resize(nAOs_, nAOs_);
+  sigmaPiDensityMatrix_.resize(nAOs_, nAOs_);
   eigenvectorMatrix_.invalidate();
 }
 
@@ -185,6 +196,10 @@ void LcaoMethod::calculateAtomicCharges() {
     LcaoUtils::calculateOrthonormalAtomicCharges(atomicCharges_, coreCharges_, densityMatrix_, aoIndexes_);
   else
     LcaoUtils::calculateMullikenAtomicCharges(atomicCharges_, coreCharges_, densityMatrix_, overlapMatrix_, aoIndexes_);
+}
+
+void LcaoMethod::calculateSigmaPiDensityMatrix() {
+    LcaoUtils::calculateSigmaPiDensityMatrix(sigmaPiDensityMatrix_, densityMatrix_, positions_, aoIndexes_);
 }
 
 void LcaoMethod::computeEnergyAndDerivatives(Utils::Derivative d) {
