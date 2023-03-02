@@ -274,22 +274,29 @@ void calculateMullikenAtomicCharges(std::vector<double>& mullikenCharges, const 
   }
 }
 
+const size_t* getIrot() {
 
-/*
- "IROT IS A MAPPING LIST. FOR EACH ELEMENT OF AROT 5 NUMBERS ARE
- NEEDED. THESE ARE, IN ORDER, FIRST AND SECOND SUBSCRIPTS OF AROT,
- AND FIRST,SECOND, AND THIRD SUBSCRIPTS OF C, THUS THE FIRST
- LINE OF IROT DEFINES AROT(1,1)=C(1,3,3)"
-*/
-const Eigen::MatrixXd irot =
-    (Eigen::MatrixXd(35, 5) << 0, 0, 0, 2, 2, 1, 1, 1, 3, 2, 2, 1, 1, 1, 2, 3, 1, 1, 2, 2, 1, 2, 1, 3, 1, 2, 2, 1, 1, 1,
-     3, 2, 1, 2, 1, 1, 3, 1, 3, 3, 2, 3, 1, 1, 3, 3, 3, 1, 2, 3, 4, 4, 2, 0, 4, 5, 4, 2, 3, 2, 6, 4, 2, 2, 2, 7, 4, 2,
-     1, 2, 8, 4, 2, 4, 2, 4, 5, 2, 0, 1, 5, 5, 2, 3, 1, 6, 6, 2, 2, 1, 7, 5, 2, 1, 1, 8, 5, 2, 4, 1, 4, 6, 2, 0, 3, 5,
-     6, 2, 3, 3, 6, 6, 2, 2, 3, 7, 6, 2, 1, 3, 8, 6, 2, 4, 3, 4, 7, 2, 0, 0, 5, 7, 2, 3, 0, 6, 7, 2, 2, 0, 7, 7, 2, 1,
-     0, 8, 7, 2, 4, 0, 4, 8, 2, 0, 4, 5, 8, 2, 3, 4, 6, 8, 2, 2, 4, 7, 8, 2, 1, 4, 8, 8, 2, 4, 4)
-        .finished();
+    /*
+    "IROT IS A MAPPING LIST. FOR EACH ELEMENT OF AROT 5 NUMBERS ARE
+    NEEDED. THESE ARE, IN ORDER, FIRST AND SECOND SUBSCRIPTS OF AROT,
+    AND FIRST,SECOND, AND THIRD SUBSCRIPTS OF C, THUS THE FIRST
+    LINE OF IROT DEFINES AROT(1,1)=C(1,3,3)"
+    */
 
-const Eigen::VectorXd isp = (Eigen::VectorXd(9) << 0, 1, 2, 2, 3, 4, 4, 5, 5).finished();
+    static const size_t irot[] = {0, 0, 0, 2, 2, 1, 1, 1, 3, 2, 2, 1, 1, 1, 2, 3, 1, 1, 2, 2, 1, 2, 1, 3, 1, 2, 2, 1, 1, 1,
+                              3, 2, 1, 2, 1, 1, 3, 1, 3, 3, 2, 3, 1, 1, 3, 3, 3, 1, 2, 3, 4, 4, 2, 0, 4, 5, 4, 2, 3, 2,
+                              6, 4, 2, 2, 2, 7, 4, 2, 1, 2, 8, 4, 2, 4, 2, 4, 5, 2, 0, 1, 5, 5, 2, 3, 1, 6, 6, 2, 2, 1,
+                              7, 5, 2, 1, 1, 8, 5, 2, 4, 1, 4, 6, 2, 0, 3, 5, 6, 2, 3, 3, 6, 6, 2, 2, 3, 7, 6, 2, 1, 3,
+                              8, 6, 2, 4, 3, 4, 7, 2, 0, 0, 5, 7, 2, 3, 0, 6, 7, 2, 2, 0, 7, 7, 2, 1, 0, 8, 7, 2, 4, 0,
+                              4, 8, 2, 0, 4, 5, 8, 2, 3, 4, 6, 8, 2, 2, 4, 7, 8, 2, 1, 4, 8, 8, 2, 4, 4};
+    return irot;
+}
+
+const size_t* getIsp() {
+    static const size_t isp[] = {0, 1, 2, 2, 3, 4, 4, 5, 5};
+    return isp;
+}
+
 
 void coe(double x2, double y2, double z2, int nij, double& r, Eigen::VectorXd& c) {
 
@@ -390,6 +397,10 @@ void calculateSigmaPiDensityMatrix(Eigen::MatrixXd& sigmaPiDensityMatrix, const 
     Eigen::MatrixXd arot = Eigen::MatrixXd::Zero(9, 9);
     Eigen::MatrixXd vect = Eigen::MatrixXd::Zero(9, 9);
 
+    // statics:
+    auto irot = getIrot();
+    auto isp = getIsp();
+
     // for coe output:
     double r;
     Eigen::VectorXd c = Eigen::VectorXd::Zero(75);
@@ -438,11 +449,11 @@ void calculateSigmaPiDensityMatrix(Eigen::MatrixXd& sigmaPiDensityMatrix, const 
             
             arot.setZero();
             for (size_t i1 = 0; i1 < 35; i1++) {
-                const size_t ac = irot.coeff(i1, 0);
-                const size_t ar = irot.coeff(i1, 1);
-                const size_t ci1 = irot.coeff(i1, 2);
-                const size_t ci2 = irot.coeff(i1, 3);
-                const size_t ci3 = irot.coeff(i1, 4);
+                const size_t ac = irot[i1 * 5 + 0];
+                const size_t ar = irot[i1 * 5 + 1];
+                const size_t ci1 = irot[i1 * 5 + 2];
+                const size_t ci2 = irot[i1 * 5 + 3];
+                const size_t ci3 = irot[i1 * 5 + 4];
                 const size_t cidx = ci1 + ci2 * 3 + ci3 * 3 * 5;
                 arot.coeffRef(ac, ar) = c(cidx);
             }
@@ -468,7 +479,7 @@ void calculateSigmaPiDensityMatrix(Eigen::MatrixXd& sigmaPiDensityMatrix, const 
                             sum = sum + arot.coeff(l1, i1) * pab.coeff(l1, l2) * arot.coeff(l2, j1);
                         }
                     }
-                    vect.coeffRef(isp.coeff(i1), isp.coeff(j1)) = vect.coeff(isp.coeff(i1), isp.coeff(j1)) + std::pow(sum, 2);
+                    vect.coeffRef(isp[i1], isp[j1]) = vect.coeff(isp[i1], isp[j1]) + std::pow(sum, 2);
                 }
             }
             
