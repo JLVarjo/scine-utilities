@@ -1,7 +1,7 @@
 /**
  * @file ElementTypes.h
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef UTILS_ELEMENTTYPES_H_
@@ -511,7 +511,10 @@ enum class ElementType : unsigned {
   Mt276 = Mt,
   Ds281 = Ds,
   Rg280 = Rg,
-  Cn285 = Cn
+  Cn285 = Cn,
+
+ // For pre-BO code only:
+  E
 };
 // clang-format on
 

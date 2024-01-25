@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "Utils/GeometryOptimization/GeometryOptimization.h"
@@ -206,12 +206,15 @@ class UnitCellGeoOptMockCalculator : public Core::Calculator {
   inline static PeriodicBoundaries getIdealPbc() {
     return PeriodicBoundaries(10.0);
   };
+  bool allowsPythonGILRelease() const override {
+    return true;
+  };
 
  private:
   AtomCollection structure_;
   Results r_;
   std::unique_ptr<Settings> settings_;
-  Core::Calculator* cloneImpl() const final {
+  std::shared_ptr<Core::Calculator> cloneImpl() const final {
     return nullptr;
   }
 };
@@ -280,7 +283,6 @@ TEST(UnitCellGeometryOptimizerTests, MixedOptimizer) {
   positions(0, 0) = -M_PI;
   positions(2, 0) = M_PI;
   AtomCollection atoms(elements, positions);
-  auto pbc = PeriodicBoundaries(mockCalculator->settings().getString(SettingsNames::periodicBoundaries));
   auto nIter = geo.optimize(atoms, logger);
 
   // Check results

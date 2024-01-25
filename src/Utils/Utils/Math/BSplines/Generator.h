@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -22,14 +22,14 @@ namespace BSplines {
  */
 class Generator {
  public:
-  Generator(const Eigen::MatrixXd& dataPoints, int splineDegree);
-  Generator(const Eigen::MatrixXd& dataPoints, int numberOfControlPoints, int splineDegree);
+  Generator(const Eigen::Ref<const Eigen::MatrixXd>& dataPoints, int splineDegree);
+  Generator(const Eigen::Ref<const Eigen::MatrixXd>& dataPoints, int numberOfControlPoints, int splineDegree);
   virtual ~Generator() = default;
 
   BSpline generateBSpline();
 
  protected:
-  const Eigen::MatrixXd& dataPoints_;
+  const Eigen::Ref<const Eigen::MatrixXd>& dataPoints_;
   int p_, dim_, m_, n_;
   Eigen::VectorXd U_, uBar_;
   Eigen::MatrixXd controlPoints_;

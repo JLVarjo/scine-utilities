@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef UTILS_TURBOMOLECALCULATOR_H
@@ -126,10 +126,17 @@ class TurbomoleCalculator final : public CloneInterface<TurbomoleCalculator, Cor
    * @return whether the calculator supports a method family
    */
   bool supportsMethodFamily(const std::string& methodFamily) const override;
+  /**
+   * @brief Whether the calculator has no underlying Python code and can therefore
+   * release the global interpreter lock in Python bindings
+   */
+  bool allowsPythonGILRelease() const override {
+    return true;
+  };
 
  private:
   /*
-   * @brief Checks whether the given Orca binary is valid.
+   * @brief Checks whether the given Turbomole binary is valid.
    */
   bool binaryIsValid();
   /*
@@ -141,7 +148,7 @@ class TurbomoleCalculator final : public CloneInterface<TurbomoleCalculator, Cor
    */
   void applySettings();
   /*
-   * @brief Sets all the paths required for a Turbomole calulaction to run.
+   * @brief Sets all the paths required for a Turbomole calculation to run.
    */
   void initializeProgram();
   /*
@@ -172,6 +179,8 @@ class TurbomoleCalculator final : public CloneInterface<TurbomoleCalculator, Cor
   std::string turbomoleBinaryDir_;
   // The absolute path to the turbomole binaries for parallel calculations
   std::string turbomoleSmpBinaryDir_;
+  // The absolute path to the turbomole scripts directory
+  std::string turbomoleScriptsDir_;
   // The binary name
   std::string binary_;
   AtomCollection atoms_;
@@ -182,7 +191,7 @@ class TurbomoleCalculator final : public CloneInterface<TurbomoleCalculator, Cor
   // Keeps track of whether the binary has been checked for validity yet
   bool binaryHasBeenChecked_ = true;
   const std::vector<std::string> availableSolvationModels_ = std::vector<std::string>{"cosmo"};
-  const std::vector<std::string> availableMethodFamilies_ = std::vector<std::string>{"DFT"};
+  const std::vector<std::string> availableMethodFamilies_ = std::vector<std::string>{"DFT", "HF", "TDDFT"};
 };
 
 } // namespace ExternalQC

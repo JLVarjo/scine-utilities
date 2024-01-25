@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -232,8 +232,8 @@ inline const AtomicSecondDerivativeCollection& AtomicSecondDerivativeCollection:
   return *this;
 }
 
-inline const AtomicSecondDerivativeCollection& AtomicSecondDerivativeCollection::
-operator+=(const AtomicSecondDerivativeCollection& dc) {
+inline const AtomicSecondDerivativeCollection&
+AtomicSecondDerivativeCollection::operator+=(const AtomicSecondDerivativeCollection& dc) {
   // Check that the two collections are of the same size before they are added.
   assert(size() == dc.size() && "Adding AtomicSecondDerivativeCollections of different sizes.");
   const auto s = size();

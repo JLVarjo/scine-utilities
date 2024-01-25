@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -22,7 +22,7 @@ using namespace UniversalSettings;
 namespace {
 
 pybind11::dict toDict(const ValueCollection& coll) {
-  pybind11::dict dictionary;
+  auto dictionary = pybind11::dict();
   for (const auto& key : coll.getKeys()) {
     dictionary[key.c_str()] = GenericValueMeta::convert(coll.getValue(key));
   }
@@ -61,24 +61,6 @@ void update(ValueCollection& coll, const pybind11::dict& dictionary, bool preser
   }
 }
 
-struct CollectionIterWrapper {
-  // Pybind doesn't need much by way of iterator requirements
-  ValueCollection::Container::const_iterator iter;
-
-  std::pair<std::string, GenericValueMeta::Variant> operator*() const {
-    return std::make_pair(iter->first, GenericValueMeta::convert(iter->second));
-  }
-
-  CollectionIterWrapper& operator++() {
-    ++iter;
-    return *this;
-  }
-
-  bool operator==(const CollectionIterWrapper& other) const {
-    return iter == other.iter;
-  }
-};
-
 void init_value_collection(pybind11::module& m) {
   // "Forward-declare" ParametrizedOptionValue
   pybind11::class_<ParametrizedOptionValue> parametrizedOptionValue(m, "ParametrizedOptionValue");
@@ -88,9 +70,9 @@ void init_value_collection(pybind11::module& m) {
       Type-erased C++ map-like container with string keys that can store the
       following types of values: ``bool``, ``int``, ``float``, ``str``,
       ``ValueCollection`` (enables nesting!), ``List[int]``, ``List[str]``,
-      and ``List[ValueCollection]``.
+      ``List[float]`` and ``List[ValueCollection]``.
 
-      Has members to imitate behavior of a python dictionary with string keys.
+      Has members to imitate behavior of a Python dictionary with string keys.
 
       >>> coll = ValueCollection()
       >>> coll
@@ -208,8 +190,15 @@ void init_value_collection(pybind11::module& m) {
 
   value_collection.def("__delitem__", [](ValueCollection& coll, const std::string& key) { coll.dropValue(key); });
 
-  value_collection.def("items", [](const ValueCollection& coll) {
-    return pybind11::make_iterator(CollectionIterWrapper{coll.begin()}, CollectionIterWrapper{coll.end()});
+  value_collection.def("items", [](ValueCollection& coll) {
+    auto items = coll.items();
+    // Python only understands Variant
+    // we do a copy here, because iterators are problematic for nested objects
+    std::vector<std::pair<std::string, GenericValueMeta::Variant>> metaItems;
+    for (const auto& item : items) {
+      metaItems.push_back(std::make_pair(item.first, GenericValueMeta::convert(item.second)));
+    }
+    return metaItems;
   });
 
   /* Pickling support would be better, but is very tricky seeing as
@@ -222,6 +211,23 @@ void init_value_collection(pybind11::module& m) {
 
   value_collection.def(pybind11::self == pybind11::self);
   value_collection.def(pybind11::self != pybind11::self);
+  // pickle support
+  value_collection.def(pybind11::pickle(
+      [](const ValueCollection& coll) { // __getstate__
+        // return a dict that fully encodes the state of the object
+        // put this in a tuple, because an empty dict would be a false value
+        // this would lead to __setstate__ not being called when unpickling
+        // which would lead to a segfault or faulty object
+        return pybind11::make_tuple(toDict(coll), "valuecollection");
+      },
+      [](pybind11::tuple dict_tuple) { // __setstate__
+        if (dict_tuple.size() != 2)
+          throw std::runtime_error("Invalid state for ValueCollection!");
+        auto dict = dict_tuple[0].cast<pybind11::dict>();
+        ValueCollection coll;
+        update(coll, dict, true);
+        return coll;
+      }));
 
   // And now for the parametrized option value methods
   parametrizedOptionValue.def(pybind11::init<std::string, ValueCollection>());
@@ -230,4 +236,19 @@ void init_value_collection(pybind11::module& m) {
 
   parametrizedOptionValue.def(pybind11::self == pybind11::self);
   parametrizedOptionValue.def(pybind11::self != pybind11::self);
+  // pickle support
+  parametrizedOptionValue.def(pybind11::pickle(
+      [](const ParametrizedOptionValue& coll) { // __getstate__
+        // return a tuple with the name and the dict of options
+        return pybind11::make_tuple(coll.selectedOption, toDict(coll.optionSettings));
+      },
+      [](pybind11::tuple dict_tuple) { // __setstate__
+        if (dict_tuple.size() != 2)
+          throw std::runtime_error("Invalid state for ParametrizedOptionValue!");
+        auto name = dict_tuple[0].cast<std::string>();
+        auto dict = dict_tuple[1].cast<pybind11::dict>();
+        ValueCollection coll;
+        update(coll, dict, true);
+        return ParametrizedOptionValue{name, coll};
+      }));
 }

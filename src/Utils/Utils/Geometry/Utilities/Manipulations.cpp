@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "Manipulations.h"
@@ -58,6 +58,23 @@ void rotatePositionsInPlace(PositionCollection& pc, const Eigen::Quaterniond& ro
   }
   // translate position back to point of rotation
   translatePositionsInPlace(pc, pointOfRotation);
+}
+
+PositionCollection displaceAlongModes(const PositionCollection& positions, const std::vector<NormalMode>& modes,
+                                      const std::vector<double>& displacementSteps) {
+  PositionCollection modifiedPositions = positions;
+  displaceAlongModesInPlace(modifiedPositions, modes, displacementSteps);
+  return modifiedPositions;
+}
+
+void displaceAlongModesInPlace(PositionCollection& positions, const std::vector<NormalMode>& modes,
+                               const std::vector<double>& displacementSteps) {
+  assert(modes.size() == displacementSteps.size());
+  for (std::size_t iMode = 0; iMode < modes.size(); ++iMode) {
+    DisplacementCollection modeToDisplace = modes[iMode].getMode();
+    modeToDisplace *= displacementSteps[iMode];
+    positions += modeToDisplace;
+  }
 }
 
 PositionCollection randomDisplacement(const PositionCollection& positions, double maxDisplacement) {

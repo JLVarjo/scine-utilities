@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 /* Tested File */
@@ -99,6 +99,9 @@ class NtOpt2MockCalculator : public CloneInterface<NtOpt2MockCalculator, Core::C
   bool supportsMethodFamily(const std::string& /*methodFamily*/) const final {
     return true;
   }
+  bool allowsPythonGILRelease() const override {
+    return true;
+  };
 
  private:
   AtomCollection structure_;
@@ -180,7 +183,7 @@ TEST(NtOptimizer2Tests, SN2FirstMaximum) {
   Core::Log logger = Core::Log::silent();
   TestCalculator testCalc;
   NtOptimizer2 nt(testCalc);
-  nt.extractionCriterion = NtOptimizer2::ntExtractFirst;
+  nt.extractionCriterion = SettingsNames::Optimizations::Nt2::extractFirst;
   runSN2Test(nt, logger);
 }
 
@@ -188,7 +191,7 @@ TEST(NtOptimizer2Tests, SN2HighestMaximum) {
   Core::Log logger = Core::Log::silent();
   TestCalculator testCalc;
   NtOptimizer2 nt(testCalc);
-  nt.extractionCriterion = NtOptimizer2::ntExtractHighest;
+  nt.extractionCriterion = SettingsNames::Optimizations::Nt2::extractHighest;
   runSN2Test(nt, logger);
 }
 

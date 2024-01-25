@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -12,6 +12,7 @@
 #include "Utils/CalculatorBasics/PropertyList.h"
 #include "Utils/CalculatorBasics/Results.h"
 #include "Utils/CalculatorBasics/ResultsAutoCompleter.h"
+#include "Utils/CalculatorBasics/SharedMemory.h"
 #include "Utils/CalculatorBasics/StatesHandler.h"
 #include "Utils/CalculatorBasics/TestCalculator.h"
 #include "Utils/Typenames.h"

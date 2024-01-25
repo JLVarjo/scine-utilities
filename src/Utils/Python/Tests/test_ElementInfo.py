@@ -1,5 +1,5 @@
 __copyright__ = """This code is licensed under the 3-clause BSD license.
-Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.
+Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.
 See LICENSE.txt for details.
 """
 
@@ -15,3 +15,6 @@ def test_ElementInfo():
     assert scine.ElementInfo.mass(scine.ElementType.Ru) == 101.07
 
     assert scine.ElementInfo.Z(scine.ElementType.F) == 9
+
+    assert scine.ElementInfo.all_implemented_elements()
+    assert [str(e) for e in scine.ElementInfo.all_implemented_elements()]

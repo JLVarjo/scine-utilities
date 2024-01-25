@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "Utils/ExternalQC/Cp2k/Cp2kCalculator.h"
@@ -52,15 +52,16 @@ Cp2kCalculator::Cp2kCalculator() {
   applySettings();
 }
 
-Cp2kCalculator::Cp2kCalculator(const Cp2kCalculator& rhs) {
+Cp2kCalculator::Cp2kCalculator(const Cp2kCalculator& rhs) : CloneInterface(rhs) {
   this->requiredProperties_ = rhs.requiredProperties_;
   auto valueCollection = dynamic_cast<const Utils::UniversalSettings::ValueCollection&>(rhs.settings());
   this->settings_ =
       std::make_unique<Utils::Settings>(Utils::Settings(valueCollection, rhs.settings().getDescriptorCollection()));
   this->setLog(rhs.getLog());
   applySettings();
-  this->setStructure(rhs.atoms_);
-  this->results() = rhs.results();
+  atoms_ = rhs.atoms_;
+  calculationDirectory_ = NativeFilenames::createRandomDirectoryName(baseWorkingDirectory_);
+  results_ = rhs.results();
   this->cp2kExecutable_ = rhs.cp2kExecutable_;
   this->binaryHasBeenChecked_ = rhs.binaryHasBeenChecked_;
 }
@@ -105,7 +106,8 @@ void Cp2kCalculator::applySettings() {
     }
   }
   // survived errors, check potential warnings
-  if ((requiredProperties_.containsSubSet(Property::Gradients) || requiredProperties_.containsSubSet(Property::Hessian) ||
+  if (!(settings_->getBool(SettingsNames::enforceScfCriterion)) &&
+      (requiredProperties_.containsSubSet(Property::Gradients) || requiredProperties_.containsSubSet(Property::Hessian) ||
        requiredProperties_.containsSubSet(Property::Thermochemistry)) &&
       settings_->getDouble(Utils::SettingsNames::selfConsistenceCriterion) > 1e-8) {
     settings_->modifyDouble(Utils::SettingsNames::selfConsistenceCriterion, 1e-8);
@@ -152,9 +154,9 @@ PropertyList Cp2kCalculator::getRequiredProperties() const {
 }
 
 PropertyList Cp2kCalculator::possibleProperties() const {
-  return Property::Energy | Property::Gradients | Property::Hessian | Property::AtomicCharges |
-         Property::DensityMatrix | Property::GridOccupation | Property::Thermochemistry | Property::OverlapMatrix |
-         Property::AOtoAtomMapping | Property::BondOrderMatrix | Property::StressTensor;
+  return Property::Energy | Property::Gradients | Property::Hessian | Property::AtomicCharges | Property::DensityMatrix |
+         Property::GridOccupation | Property::Thermochemistry | Property::OverlapMatrix | Property::AOtoAtomMapping |
+         Property::BondOrderMatrix | Property::StressTensor | Property::SuccessfulCalculation;
 }
 
 const Results& Cp2kCalculator::calculate(std::string description) {
@@ -301,6 +303,7 @@ const Results& Cp2kCalculator::calculateImpl(const std::string& description) {
                                                 results_.get<Property::Energy>());
     thermoCalc.setMolecularSymmetryNumber(parser.getSymmetryNumber());
     thermoCalc.setTemperature(settings_->getDouble(Utils::SettingsNames::temperature));
+    thermoCalc.setPressure(settings_->getDouble(Utils::SettingsNames::pressure));
     auto thermochemistry = thermoCalc.calculate();
     results_.set<Property::Thermochemistry>(thermochemistry);
   }

@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 /* Internal Headers */
@@ -86,8 +86,11 @@ inline std::string OptionListDescriptor::explainInvalidValue(const GenericValue&
     return "Generic value for string setting '" + getPropertyDescription() + "' is not a string!";
   }
   const std::string value = v;
-  std::string explanation =
-      "Option list descriptor '" + getPropertyDescription() + "' does not include an option with value " + value;
+  std::string explanation = "Option list descriptor '" + getPropertyDescription() +
+                            "' does not include an option with value '" + value + "'\nAvailable options are:\n";
+  for (const auto& option : options_) {
+    explanation += option + "\n";
+  }
   return explanation;
 }
 

@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -89,6 +89,13 @@ class ResultsAutoCompleter {
   void setTemperature(double temperature);
 
   /**
+   * @brief Sets the pressure (in Pa) employed in the ThermochemistryCalculator class.
+   *
+   * The default is 101325 Pa (1 atm).
+   */
+  void setPressure(double pressure);
+
+  /**
    * @brief Sets the molecular symmetry number employed in the ThermochemistryCalculator.
    *
    * The default is 1. Employing a
@@ -132,8 +139,9 @@ class ResultsAutoCompleter {
   /** \brief  List of Properties to be autocompleted if possible */
   PropertyList wantedProperties_;
   /** \brief Temperature employed in ThermochemistryCalculator */
-
   double temperature_{298.15};
+  /** \brief Pressure (in Pa) employed in ThermochemistryCalculator */
+  double pressure_{101325.0};
   int sigma_{1};
   ZPVEInclusion zpveIncluded_{ZPVEInclusion::notIncluded};
   std::vector<double> coreCharges_;

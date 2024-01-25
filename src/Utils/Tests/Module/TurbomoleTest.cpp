@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include <Utils/Bonds/BondDetector.h>
@@ -48,11 +48,19 @@ TEST_F(ATurbomoleTest, SettingsAreSetCorrectly) {
   calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 125);
   calculator.settings().modifyString(Utils::SettingsNames::method, "PBE-D3BJ");
   calculator.settings().modifyString(Utils::SettingsNames::basisSet, "def2-SVP");
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::hessianCalculationType, "numerical");
   calculator.settings().modifyString(Utils::SettingsNames::spinMode, "unrestricted");
   calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory, "test_1");
   calculator.settings().modifyDouble(Utils::SettingsNames::temperature, 300.3);
   calculator.settings().modifyString(Utils::SettingsNames::solvation, "cosmo");
   calculator.settings().modifyString(Utils::SettingsNames::solvent, "water");
+  calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::cavityPointsPerAtom, 362);
+  calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::cavitySegmentsPerAtom, 122);
+  calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::enableRi, false);
+  calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::numExcitedStates, 5);
+  calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::enforceScfCriterion, true);
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::dftGrid, "6");
+  calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::enforceNumforce, true);
 
   ASSERT_THAT(calculator.settings().getInt(Utils::SettingsNames::externalProgramNProcs), Eq(2));
   ASSERT_THAT(calculator.settings().getDouble(Utils::SettingsNames::selfConsistenceCriterion), Eq(0.0001));
@@ -62,10 +70,19 @@ TEST_F(ATurbomoleTest, SettingsAreSetCorrectly) {
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::method), Eq("PBE-D3BJ"));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::basisSet), Eq("def2-SVP"));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::spinMode), Eq("unrestricted"));
+  ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::hessianCalculationType),
+              Eq("numerical"));
   ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory), Eq("test_1"));
   ASSERT_THAT(calculator.settings().getDouble(Utils::SettingsNames::temperature), Eq(300.3));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::solvation), Eq("cosmo"));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::solvent), Eq("water"));
+  ASSERT_THAT(calculator.settings().getInt(Utils::ExternalQC::SettingsNames::cavityPointsPerAtom), Eq(362));
+  ASSERT_THAT(calculator.settings().getInt(Utils::ExternalQC::SettingsNames::cavitySegmentsPerAtom), Eq(122));
+  ASSERT_FALSE(calculator.settings().getBool(Utils::ExternalQC::SettingsNames::enableRi));
+  ASSERT_THAT(calculator.settings().getInt(Utils::ExternalQC::SettingsNames::numExcitedStates), Eq(5));
+  ASSERT_THAT(calculator.settings().getBool(ExternalQC::SettingsNames::enforceScfCriterion), Eq(true));
+  ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::dftGrid), Eq("6"));
+  ASSERT_THAT(calculator.settings().getBool(Utils::ExternalQC::SettingsNames::enforceNumforce), Eq(true));
 }
 
 TEST_F(ATurbomoleTest, HessianOutputIsParsedCorrectly) {
@@ -85,6 +102,30 @@ TEST_F(ATurbomoleTest, NumberOfAtomsIsParsedCorrectly) {
   ExternalQC::TurbomoleMainOutputParser parser(files);
   int nAtoms = parser.getNumberAtoms();
   ASSERT_EQ(nAtoms, 3);
+}
+
+TEST_F(ATurbomoleTest, NumberOfPointChargesIsParsedCorrectly) {
+  ExternalQC::TurbomoleMainOutputParser parser(files);
+  int nPointCharges = parser.getNumberOfNonZeroPointCharges();
+  ASSERT_EQ(nPointCharges, 6);
+
+  // now set two charges to zero
+  std::string newCharges("-2.94688   2.46605   -0.865247   0.0\n"
+                         "-2.57144   2.64491    0.0       -0.6618\n"
+                         "-0.45869   2.17585   -1.676718   0.3309\n"
+                         "1.007466   2.33934   -1.521129   0.3309\n"
+                         "0.259054   1.95301   -1.079414   0.0\n"
+                         "-2.33260   1.81694    0.423126   0.3309\n");
+  std::string temporaryChargeFile = "tmp_charges.pc";
+  std::ofstream pc(temporaryChargeFile);
+  pc << newCharges;
+  pc.close();
+  files.pointChargesFile = temporaryChargeFile;
+  ExternalQC::TurbomoleMainOutputParser parser2(files);
+  nPointCharges = parser2.getNumberOfNonZeroPointCharges();
+  ASSERT_EQ(nPointCharges, 4);
+
+  boost::filesystem::remove_all(temporaryChargeFile);
 }
 
 TEST_F(ATurbomoleTest, EnergyAndChargesAreParsedCorrectly) {
@@ -200,6 +241,7 @@ TEST_F(ATurbomoleTest, TurbomoleCalculationIsPerformedCorrectlyViaScine) {
     calculator.settings().modifyInt(Utils::SettingsNames::externalProgramNProcs, 1);
     calculator.settings().modifyString(Utils::SettingsNames::method, "pbe d3bj");
     calculator.settings().modifyString(Utils::SettingsNames::basisSet, "def2-svp");
+    calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::dftGrid, "6");
     calculator.setRequiredProperties(Property::Energy);
 
     std::stringstream stream("5\n\n"
@@ -229,6 +271,16 @@ TEST_F(ATurbomoleTest, TurbomoleCalculationIsPerformedCorrectlyViaScine) {
     ASSERT_THROW(calculator.calculate(""), std::logic_error);
     calculator.settings().modifyString(Utils::SettingsNames::spinMode, "unrestricted");
 
+    // grid option is not available
+    calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::dftGrid, "8");
+    ASSERT_THROW(calculator.calculate(""), std::runtime_error);
+    calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::dftGrid, "m3");
+
+    // hessian calculation type not available
+    calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::hessianCalculationType, "semi-numerical");
+    ASSERT_THROW(calculator.calculate(""), std::runtime_error);
+    calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::hessianCalculationType, "analytical");
+
     // solvent is not implemented
     calculator.settings().modifyString(Utils::SettingsNames::solvation, "cosmo");
     calculator.settings().modifyString(Utils::SettingsNames::solvent, "methane");
@@ -240,12 +292,17 @@ TEST_F(ATurbomoleTest, TurbomoleCalculationIsPerformedCorrectlyViaScine) {
     calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 2);
     ASSERT_THROW(calculator.calculate(""), std::runtime_error);
     calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 100);
-
     // Calculate
     const auto& results = calculator.calculate("");
 
+    auto calcDir = calculator.getCalculationDirectory();
+    ExternalQC::TurbomoleFiles outputFiles;
+    setCorrectTurbomoleFileNames(outputFiles, calcDir);
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.ridftFile));
+    ASSERT_FALSE(boost::filesystem::exists(outputFiles.dscfFile));
+
     // Assert energy
-    ASSERT_THAT(results.get<Property::Energy>(), DoubleNear(-40.41523066560, 1e-8));
+    ASSERT_THAT(results.get<Property::Energy>(), DoubleNear(-40.41523066560, 1e-7));
 
     // Check whether the calculation directory can be deleted.
     bool isDir = FilesystemHelpers::isDirectory(calculator.getCalculationDirectory());
@@ -253,6 +310,17 @@ TEST_F(ATurbomoleTest, TurbomoleCalculationIsPerformedCorrectlyViaScine) {
     bool deleted = !FilesystemHelpers::isDirectory(calculator.getCalculationDirectory());
     ASSERT_THAT(isDir, Eq(true));
     ASSERT_THAT(deleted, Eq(true));
+
+    calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::enableRi, false);
+    // Calculate
+    calculator.calculate("");
+    auto dscfCalcDir = calculator.getCalculationDirectory();
+    ExternalQC::TurbomoleFiles dscfOutputFiles;
+    setCorrectTurbomoleFileNames(dscfOutputFiles, dscfCalcDir);
+    ASSERT_TRUE(boost::filesystem::exists(dscfOutputFiles.dscfFile));
+    ASSERT_FALSE(boost::filesystem::exists(dscfOutputFiles.ridftFile));
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
   }
   else {
     auto logger = Core::Log();
@@ -277,13 +345,13 @@ TEST_F(ATurbomoleTest, GradientsAreParsedCorrectly) {
 
   GradientCollection pcGrad = parser.getPointChargesGradients();
 
-  Eigen::MatrixXd refPcGrad(3, 3);
-  refPcGrad << -0.000466463, 1.30447e-05, 0.000307525, -0.000362372, -5.79554e-05, 0.000517804, 0.000865896,
-      -4.4095e-05, -0.000890785;
+  Eigen::MatrixXd refPcGrad(6, 3);
+  refPcGrad << 0.00464611, -0.00506001, 0.00315421, 0.0140022, -0.0235765, -0.0080181, -0.00945388, 0.0152487, 6.56595e-05,
+      0.00117453, -0.00249104, 0.00891097, 0.00234593, -0.00758294, 0.0117502, -0.0146682, 0.0242076, -0.0315787;
 
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 6; ++i) {
     for (int j = 0; j < 3; ++j) {
-      ASSERT_THAT(pcGrad(i, j), DoubleNear(refPcGrad(i, j), 1e-8));
+      ASSERT_THAT(pcGrad(i, j), DoubleNear(refPcGrad(i, j), 1e-7));
     }
   }
 }
@@ -332,9 +400,17 @@ TEST_F(ATurbomoleTest, InputFileIsWrittenCorrectlyAndStatesHandlingWorks) {
     bool cosmoSectionFound = line.find("$cosmo") != std::string::npos;
     ASSERT_TRUE(cosmoSectionFound);
     std::getline(in, line);
+    // check if correct nppa (number of points per atoms) is set
     std::getline(in, line);
+    bool correctNppaFound = line.find("nppa= 1082") != std::string::npos;
+    // check if correct nppa (number of segments per atoms) is set
+    std::getline(in, line);
+    bool correctNspaFound = line.find("nspa=   92") != std::string::npos;
     // check if correct solvent radius is applied
+    std::getline(in, line);
     bool correctSolvRadFound = line.find("rsolv= 1.93") != std::string::npos;
+    ASSERT_TRUE(correctNppaFound);
+    ASSERT_TRUE(correctNspaFound);
     ASSERT_TRUE(correctSolvRadFound);
 
     // Check that the states handler works.
@@ -405,17 +481,24 @@ TEST_F(ATurbomoleTest, InputFileIsWrittenCorrectlyAndStatesHandlingWorks) {
 #endif
 }
 
-TEST_F(ATurbomoleTest, PointChargeEmbeddingWorks) {
+/*
+ * Idea of the test: Check if the elements Cu, Pd, and Gd are handled correctly
+ * by the define-input creator. For these elements multiple sets of EHT parameters
+ * are defined. Therefore, an additional return must be added to the define input.
+ */
+TEST_F(ATurbomoleTest, MultipleEHTParameterSets) {
 #ifndef _WIN32
   const char* envVariablePtr = std::getenv("TURBODIR");
   if (envVariablePtr) {
-    auto pointChargesFile = Utils::NativeFilenames::combinePathSegments(ressourcesDir, "test_point_charges.pc");
-    calculator.settings().modifyString(Scine::Utils::ExternalQC::SettingsNames::pointChargesFile, pointChargesFile);
+    calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 1);
+    calculator.settings().modifyInt(Utils::SettingsNames::molecularCharge, 7);
+    calculator.settings().modifyInt(Utils::SettingsNames::spinMultiplicity, 1);
+    calculator.settings().modifyString(Utils::SettingsNames::spinMode, "restricted");
 
     std::stringstream stream("3\n\n"
-                             "H 3.073966 2.638248 0.173676\n"
-                             "H 2.715150 1.261101 0.831928\n"
-                             "O 2.828578 1.726535 0.000000\n");
+                             "Cu     0.00000000   0.00000001  -0.00000097\n"
+                             "Pd     100.000000   0.00000000   0.00000000\n"
+                             "Gd     500.000000   0.00000000   0.00000000\n");
 
     auto structure = Utils::XyzStreamHandler::read(stream);
     calculator.setStructure(structure);
@@ -431,6 +514,56 @@ TEST_F(ATurbomoleTest, PointChargeEmbeddingWorks) {
     setCorrectTurbomoleFileNames(outputFiles, calcDir);
 
     ASSERT_TRUE(boost::filesystem::exists(outputFiles.controlFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.defineInputFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.coordFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.mosFile));
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
+  }
+  else {
+    auto logger = Core::Log();
+    logger.output << "Turbomole input creation was not tested directly as no binary path was specified." << Core::Log::endl;
+  }
+#endif
+}
+
+TEST_F(ATurbomoleTest, PointChargeEmbeddingWorks) {
+#ifndef _WIN32
+  const char* envVariablePtr = std::getenv("TURBODIR");
+  if (envVariablePtr) {
+    std::stringstream stream("3\n\n"
+                             "H 3.073966 2.638248 0.173676\n"
+                             "H 2.715150 1.261101 0.831928\n"
+                             "O 2.828578 1.726535 0.000000\n");
+
+    auto structure = Utils::XyzStreamHandler::read(stream);
+    calculator.setStructure(structure);
+    std::string wrongPointCharges = "2\n"
+                                    "-2.94688   2.46605 -0.865247 0.3309\n"
+                                    "-2.3326  1.81694 0.423126   0.3309\n";
+
+    std::ofstream out("wrong_point_charges.dat");
+    out << wrongPointCharges;
+    out.close();
+
+    calculator.settings().modifyString(Scine::Utils::ExternalQC::SettingsNames::pointChargesFile,
+                                       "wrong_point_charges.dat");
+    ASSERT_THROW(calculator.calculate(""), std::runtime_error);
+    boost::filesystem::remove_all("wrong_point_charges.dat");
+
+    auto pointChargesFile = Utils::NativeFilenames::combinePathSegments(ressourcesDir, "point_charges.pc");
+    calculator.settings().modifyString(Scine::Utils::ExternalQC::SettingsNames::pointChargesFile, pointChargesFile);
+    try {
+      calculator.calculate("");
+    }
+    catch (Core::UnsuccessfulCalculationException& e) {
+    }
+
+    auto calcDir = calculator.getCalculationDirectory();
+    ExternalQC::TurbomoleFiles outputFiles;
+    setCorrectTurbomoleFileNames(outputFiles, calcDir);
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.controlFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.pointChargesFile));
 
     std::fstream in;
     in.open(outputFiles.controlFile);
@@ -455,6 +588,31 @@ TEST_F(ATurbomoleTest, PointChargeEmbeddingWorks) {
     ASSERT_TRUE(pointChargesFound);
     ASSERT_TRUE(pointChargesGradientFound);
     ASSERT_TRUE(pointChargesGradientFileFound);
+
+    // check if the point charges file is written correctly
+    std::fstream pcIn;
+    pcIn.open(outputFiles.pointChargesFile);
+    double x, y, z, charge;
+    std::getline(pcIn, line);
+    std::stringstream l(line);
+    l >> x >> y >> z >> charge;
+    ASSERT_THAT(x, DoubleNear(-2.94688, 1e-3));
+    ASSERT_THAT(y, DoubleNear(2.46605, 1e-3));
+    ASSERT_THAT(z, DoubleNear(-0.865247, 1e-3));
+    ASSERT_THAT(charge, DoubleNear(0.3309, 1e-3));
+    // skip some lines
+    std::getline(pcIn, line);
+    std::getline(pcIn, line);
+    std::getline(pcIn, line);
+    std::getline(pcIn, line);
+    std::getline(pcIn, line);
+    std::stringstream l2(line);
+    l2 >> x >> y >> z >> charge;
+    ASSERT_THAT(x, DoubleNear(0.259054, 1e-3));
+    ASSERT_THAT(y, DoubleNear(1.953015, 1e-3));
+    ASSERT_THAT(z, DoubleNear(-1.079414, 1e-3));
+    ASSERT_THAT(charge, DoubleNear(-0.6618, 1e-3));
+
     boost::filesystem::remove_all(calculator.getCalculationDirectory());
   }
   else {
@@ -527,6 +685,8 @@ TEST_F(ATurbomoleTest, BasisSetStringIsConvertedCorrectly) {
     calculator.settings().modifyString(Utils::SettingsNames::basisSet, "dummyBasisSet");
     auto basisSet3 = calculator.settings().getString(Utils::SettingsNames::basisSet);
     ASSERT_THROW(helper.mapBasisSetToTurbomoleStringRepresentation(basisSet3), std::runtime_error);
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
   }
   else {
     auto logger = Core::Log();
@@ -586,10 +746,12 @@ TEST_F(ATurbomoleTest, ImprovedScfConvergenceSettingsAreAppliedCorrectly) {
     calculator.settings().modifyBool(Utils::SettingsNames::scfDamping, true);
     calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 250);
     calculator.settings().modifyDouble(Utils::SettingsNames::selfConsistenceCriterion, 1e-4);
+    calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::dftGrid, "7");
 
     auto scfIter = calculator.settings().getInt(Utils::SettingsNames::maxScfIterations);
     auto scfOrbShift = calculator.settings().getDouble(Utils::ExternalQC::SettingsNames::scfOrbitalShift);
     auto scfConvCrit = int(round(-log10(calculator.settings().getDouble(Utils::SettingsNames::selfConsistenceCriterion))));
+    auto gridSize = calculator.settings().getString(Utils::ExternalQC::SettingsNames::dftGrid);
 
     std::stringstream stream("5\n\n"
                              "C     0.00000000   0.00000001  -0.00000097\n"
@@ -618,23 +780,27 @@ TEST_F(ATurbomoleTest, ImprovedScfConvergenceSettingsAreAppliedCorrectly) {
 
     std::regex scfIterRegex(R"((scfiterlimit)+ +([0-9]+))");
     std::regex scfDamp(R"(scfdamp   start=0.500  step=0.05  min=0.10)");
-    std::regex scfOrbitalShift(R"((scforbitalshift closedshell=)++([-\.0-9]+))");
+    std::regex scfOrbitalShift(R"((scforbitalshift automatic=)++([-\.0-9]+))");
     std::regex convThreshold(R"((scfconv)+ +([0-9]+))");
+    std::regex gridSizeRegex(R"((gridsize)+ +([7]+))");
 
-    std::smatch m1, m2, m3, m4;
+    std::smatch m1, m2, m3, m4, m5;
     bool scfIterFound = std::regex_search(content, m1, scfIterRegex);
     bool scfDampFound = std::regex_search(content, m2, scfDamp);
     bool scfOrbitalShiftFound = std::regex_search(content, m3, scfOrbitalShift);
     bool convThresholdFound = std::regex_search(content, m4, convThreshold);
+    bool gridSizeFound = std::regex_search(content, m5, gridSizeRegex);
 
     ASSERT_TRUE(scfIterFound);
     ASSERT_TRUE(scfDampFound);
     ASSERT_TRUE(scfOrbitalShiftFound);
     ASSERT_TRUE(convThresholdFound);
+    ASSERT_TRUE(gridSizeFound);
 
     ASSERT_EQ(std::stoi(m1[2]), scfIter);
     ASSERT_EQ(std::stod(m3[2]), scfOrbShift);
     ASSERT_EQ(std::stoi(m4[2]), scfConvCrit);
+    ASSERT_EQ(m5[2], gridSize);
     boost::filesystem::remove_all(calculator.getCalculationDirectory());
 
     // Check if scf convergence criteria are adapted for Hessian and/or gradients calculation
@@ -648,10 +814,242 @@ TEST_F(ATurbomoleTest, ImprovedScfConvergenceSettingsAreAppliedCorrectly) {
     calculator.setRequiredProperties(Property::Energy | Property::Gradients);
     auto thirdCalculator = calculator.clone();
     ASSERT_THAT(thirdCalculator->settings().getDouble(Utils::SettingsNames::selfConsistenceCriterion), Eq(1e-8));
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
   }
   else {
     auto logger = Core::Log();
     logger.output << "Turbomole control file was not checked as no binary path was specified." << Core::Log::endl;
+  }
+#endif
+}
+
+TEST_F(ATurbomoleTest, InputFileIsWrittenCorrectlyAndUserDefinedSolventWorks) {
+#ifndef _WIN32
+  const char* envVariablePtr = std::getenv("TURBODIR");
+  if (envVariablePtr) {
+    calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 1);
+    calculator.settings().modifyInt(Utils::SettingsNames::molecularCharge, 1);
+    calculator.settings().modifyInt(Utils::SettingsNames::spinMultiplicity, 2);
+    calculator.settings().modifyString(Utils::SettingsNames::solvation, "cosmo");
+    calculator.settings().modifyString(Utils::SettingsNames::solvent, "user_defined(80.1, 1.95)");
+    calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::cavityPointsPerAtom, 2562);
+    calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::cavitySegmentsPerAtom, 272);
+
+    std::stringstream stream("5\n\n"
+                             "C     0.00000000   0.00000001  -0.00000097\n"
+                             "H     0.62612502   0.62612484   0.62613824\n"
+                             "H    -0.62612503  -0.62612486   0.62613824\n"
+                             "H    -0.62612481   0.62612463  -0.62613657\n"
+                             "H     0.62612481  -0.62612464  -0.62613657\n");
+
+    auto structure = Utils::XyzStreamHandler::read(stream);
+    calculator.setStructure(structure);
+
+    try {
+      calculator.calculate("");
+    }
+    catch (Core::UnsuccessfulCalculationException& e) {
+    }
+
+    auto calcDir = calculator.getCalculationDirectory();
+    ExternalQC::TurbomoleFiles outputFiles;
+    setCorrectTurbomoleFileNames(outputFiles, calcDir);
+
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.controlFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.defineInputFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.coordFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.alphaFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.betaFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.solvationInputFile));
+
+    std::fstream in;
+    in.open(outputFiles.controlFile);
+    std::string line;
+    std::getline(in, line);
+    bool cosmoSectionFound = line.find("$cosmo") != std::string::npos;
+    ASSERT_TRUE(cosmoSectionFound);
+    std::getline(in, line);
+    bool correctEpsFound = line.find("epsilon=   80.100") != std::string::npos;
+    ASSERT_TRUE(correctEpsFound);
+    // check if correct nppa (number of points per atoms) is set
+    std::getline(in, line);
+    bool correctNppaFound = line.find("nppa= 2562") != std::string::npos;
+    ASSERT_TRUE(correctNppaFound);
+    // check if correct nppa (number of segments per atoms) is set
+    std::getline(in, line);
+    bool correctNspaFound = line.find("nspa=  272") != std::string::npos;
+    ASSERT_TRUE(correctNspaFound);
+    // check if correct solvent radius is applied
+    std::getline(in, line);
+    bool correctSolvRadFound = line.find("rsolv= 1.95") != std::string::npos;
+    ASSERT_TRUE(correctSolvRadFound);
+
+    // check if typo's/wrong syntax is detected and an error is returned.
+    calculator.settings().modifyString(Utils::SettingsNames::solvent, "user_defined(80.1, 1.95");
+    ASSERT_THROW(calculator.calculate(""), std::logic_error);
+    calculator.settings().modifyString(Utils::SettingsNames::solvent, "user_defined80.1, 1.95)");
+    ASSERT_THROW(calculator.calculate(""), std::logic_error);
+    calculator.settings().modifyString(Utils::SettingsNames::solvent, "user_defined(80.1 1.95)");
+    ASSERT_THROW(calculator.calculate(""), std::exception);
+    calculator.settings().modifyString(Utils::SettingsNames::solvent, "user_defined(80.1, 1.95, 67.9)");
+    ASSERT_THROW(calculator.calculate(""), std::logic_error);
+    calculator.settings().modifyString(Utils::SettingsNames::solvent, "use_defined(80.1, 1.95)");
+    ASSERT_THROW(calculator.calculate(""), std::runtime_error);
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
+  }
+  else {
+    auto logger = Core::Log();
+    logger.output << "Turbomole input creation was not tested directly as no binary path was specified." << Core::Log::endl;
+  }
+#endif
+}
+
+TEST_F(ATurbomoleTest, HFWorks) {
+#ifndef _WIN32
+  const char* envVariablePtr = std::getenv("TURBODIR");
+  if (envVariablePtr) {
+    calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 100);
+    calculator.settings().modifyString(Utils::SettingsNames::basisSet, "def2-SVP");
+    calculator.settings().modifyString(Utils::SettingsNames::method, "HF");
+
+    std::stringstream stream("3\n\n"
+                             "H     0.95000000    0.00000000    0.00000000\n"
+                             "O     0.00000000    0.00000000    0.00000000\n"
+                             "H    -0.23930000    0.91900000    0.00000000\n");
+
+    auto structure = Utils::XyzStreamHandler::read(stream);
+    calculator.setStructure(structure);
+    calculator.setRequiredProperties(Utils::Property::Energy);
+
+    Utils::Results results = calculator.calculate("");
+    ASSERT_TRUE(std::fabs(results.get<Utils::Property::Energy>() + 75.96139355869) < 1e-6);
+
+    auto calcDir = calculator.getCalculationDirectory();
+    ExternalQC::TurbomoleFiles outputFiles;
+    setCorrectTurbomoleFileNames(outputFiles, calcDir);
+
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.controlFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.defineInputFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.coordFile));
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
+  }
+  else {
+    auto logger = Core::Log();
+    logger.output << "Turbomole calculation was not tested directly as no binary path was specified." << Core::Log::endl;
+  }
+#endif
+}
+
+TEST_F(ATurbomoleTest, ExcitedStatesCalculationWorks) {
+#ifndef _WIN32
+  const char* envVariablePtr = std::getenv("TURBODIR");
+  if (envVariablePtr) {
+    calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::numExcitedStates, 0);
+
+    std::stringstream stream("5\n\n"
+                             "C     0.00000000   0.00000001  -0.00000097\n"
+                             "H     0.62612502   0.62612484   0.62613824\n"
+                             "H    -0.62612503  -0.62612486   0.62613824\n"
+                             "H    -0.62612481   0.62612463  -0.62613657\n"
+                             "H     0.62612481  -0.62612464  -0.62613657\n");
+
+    auto structure = Utils::XyzStreamHandler::read(stream);
+    calculator.setStructure(structure);
+    calculator.setRequiredProperties(Utils::Property::ExcitedStates | Utils::Property::Gradients);
+
+    ASSERT_THROW(calculator.calculate(""), std::logic_error);
+
+    calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::numExcitedStates, 1);
+
+    ASSERT_THROW(calculator.calculate(""), std::runtime_error);
+
+    calculator.settings().modifyString(Utils::SettingsNames::spinMode, "unrestricted");
+    try {
+      calculator.calculate("");
+    }
+    catch (Core::UnsuccessfulCalculationException& e) {
+    }
+
+    auto calcDir = calculator.getCalculationDirectory();
+    ExternalQC::TurbomoleFiles outputFiles;
+    setCorrectTurbomoleFileNames(outputFiles, calcDir);
+
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.controlFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.defineInputFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.coordFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.alphaFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.betaFile));
+    ASSERT_TRUE(boost::filesystem::exists(outputFiles.escfFile));
+
+    std::ifstream input;
+    input.open(outputFiles.controlFile);
+    auto content = std::string(std::istreambuf_iterator<char>{input}, {});
+    input.close();
+    std::regex urpaRegex(R"(scfinstab urpa)");
+    std::regex noStatesRegex(R"( a\s+1)");
+    std::smatch m1, m2;
+    bool urpaFound = std::regex_search(content, m1, urpaRegex);
+    bool noStatesFound = std::regex_search(content, m2, noStatesRegex);
+    ASSERT_TRUE(urpaFound);
+    ASSERT_TRUE(noStatesFound);
+
+    ExternalQC::TurbomoleMainOutputParser parser(outputFiles);
+
+    double energy = parser.getExcitedStateEnergy(1);
+    ASSERT_THAT(energy, DoubleNear(-40.03033677012758, 1e-7));
+
+    GradientCollection grad = parser.getGradients();
+
+    Eigen::MatrixXd refGrad(3, 3);
+    refGrad << -0.50547384571141e-04, -0.50539327972199e-04, 0.14217223260176, -0.37492948591254e-01,
+        -0.37493036890169e-01, -0.87034336740643e-01, 0.37525979191447e-01, 0.37526068429244e-01, -0.87049842686047e-01;
+
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        ASSERT_THAT(grad(i, j), DoubleNear(refGrad(i, j), 1e-5));
+      }
+    }
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
+  }
+  else {
+    auto logger = Core::Log();
+    logger.output << "Turbomole input creation was not tested directly as no binary path was specified." << Core::Log::endl;
+  }
+#endif
+}
+
+TEST_F(ATurbomoleTest, NumforceCallWorks) {
+#ifndef _WIN32
+  const char* envVariablePtr = std::getenv("TURBODIR");
+  if (envVariablePtr) {
+    calculator.settings().modifyDouble(Utils::SettingsNames::selfConsistenceCriterion, 1e-6);
+    calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::enforceScfCriterion, true);
+    calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::hessianCalculationType, "numerical");
+
+    std::stringstream stream("2\n\n"
+                             "H 3.073966 2.638248 0.173676\n"
+                             "H 2.715150 1.261101 0.831928\n");
+
+    auto structure = Utils::XyzStreamHandler::read(stream);
+    calculator.setStructure(structure);
+    calculator.setRequiredProperties(Utils::Property::Hessian);
+    ASSERT_THROW(calculator.calculate(""), std::runtime_error);
+    calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::enforceNumforce, true);
+    // Calculate
+    const auto& results = calculator.calculate("");
+    ASSERT_TRUE(results.has<Property::Hessian>());
+    // Get hessian and calculate eigenvalues
+    const auto& hessian = results.get<Property::Hessian>();
+    auto evals = hessian.eigenvalues();
+    // Check if lowest eval is equal to the reference eigenvalue
+    double ref_eval_0 = -0.06076541616112619;
+    ASSERT_TRUE(abs(evals[0].real() - ref_eval_0) < 1e-6);
+
+    boost::filesystem::remove_all(calculator.getCalculationDirectory());
   }
 #endif
 }

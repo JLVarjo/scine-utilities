@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -19,7 +19,8 @@ namespace BSplines {
  * */
 class ControlPolygonGenerator : public Generator {
  public:
-  explicit ControlPolygonGenerator(const Eigen::MatrixXd& dataPoints, unsigned degree = 3, bool uniformKnotVector = false);
+  explicit ControlPolygonGenerator(const Eigen::Ref<const Eigen::MatrixXd>& dataPoints, unsigned degree = 3,
+                                   bool uniformKnotVector = false);
 
  private:
   Eigen::VectorXd generateKnotVector() override;

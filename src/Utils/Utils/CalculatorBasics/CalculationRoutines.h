@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -10,7 +10,9 @@
 
 #include <Core/Exceptions.h>
 #include <Core/Interfaces/Calculator.h>
+#include <Core/Interfaces/EmbeddingCalculator.h>
 #include <Core/Log.h>
+#include <Core/ModuleManager.h>
 #include <Utils/CalculatorBasics/Results.h>
 #include <Utils/Scf/LcaoUtils/SpinMode.h>
 #include <Utils/Settings.h>
@@ -46,6 +48,97 @@ inline Results calculateWithCatch(Core::Calculator& calculator, Core::Log& log, 
   return results;
 }
 
+inline void inputPreparation(std::string& method_family, std::string& program) {
+  if (!program.empty()) {
+    std::transform(std::begin(program) + 1, std::end(program), std::begin(program) + 1,
+                   [](unsigned char x) { return std::tolower(x); });
+
+    program[0] = std::toupper(program[0]);
+  }
+
+  std::transform(std::begin(method_family), std::end(method_family), std::begin(method_family),
+                 [](unsigned char x) { return std::toupper(x); });
+}
+
+inline std::vector<std::string> split(const std::string& s, char delimiter) {
+  std::vector<std::string> elements;
+  std::stringstream ss;
+  ss.str(s);
+  std::string item;
+
+  while (std::getline(ss, item, delimiter)) {
+    elements.push_back(item);
+  }
+  return elements;
+}
+
+inline std::vector<std::shared_ptr<Scine::Core::Calculator>>
+determineUnderlyingCalculators(std::vector<std::string>& listOfMethods, std::vector<std::string>& listOfPrograms) {
+  auto& manager = Scine::Core::ModuleManager::getInstance();
+  if (listOfMethods.size() != listOfPrograms.size()) {
+    throw std::runtime_error("Unequal number of method families and programs given. Please provide a corresponding "
+                             "program for each method family in the embedding calculation.");
+  }
+  if (listOfMethods.size() >= 2 && listOfPrograms.size() >= 2) {
+    std::vector<std::shared_ptr<Scine::Core::Calculator>> underlyingCalculators;
+    for (long unsigned int i = 0; i < listOfPrograms.size(); i++) {
+      underlyingCalculators.emplace_back(manager.get<Scine::Core::Calculator>(
+          Scine::Core::Calculator::supports(listOfMethods.at(i)), listOfPrograms.at(i)));
+    }
+    return underlyingCalculators;
+  }
+  else {
+    throw std::runtime_error(
+        "Please provide at least two method families (and the corresponding programs) for an embedding calculation.");
+  }
+}
+
+inline std::shared_ptr<Scine::Core::Calculator> getCalculator(std::string method_family, std::string program) {
+  // Load module manager
+  auto& manager = Scine::Core::ModuleManager::getInstance();
+
+  inputPreparation(method_family, program);
+
+  // Generate calculator
+  const char sep = '/';
+  auto listOfMethods = split(method_family, sep);
+  auto listOfPrograms = split(program, sep);
+
+  std::shared_ptr<Scine::Core::Calculator> calc;
+  if (listOfMethods.size() < 2 && listOfPrograms.size() < 2) {
+    std::shared_ptr<Scine::Core::Calculator> calc;
+    try {
+      auto f = Scine::Core::Calculator::supports(method_family);
+      calc = manager.get<Scine::Core::Calculator>(Scine::Core::Calculator::supports(method_family), program);
+    }
+    catch (...) {
+      if (program.empty() || program == "Any") {
+        std::cout << "No SCINE module providing '" << method_family << "' is currently loaded.\n";
+        std::cout << "Please add the module to the SCINE_MODULE_PATH\n";
+        std::cout << "or load the corresponding Python module in order for it to be accessible.\n";
+        throw std::runtime_error("Failed to load method/program.");
+      }
+
+      std::cout << "No SCINE module named '" << program << "' providing '" << method_family << "' is currently loaded.\n";
+      std::cout << "Please add the module to the SCINE_MODULE_PATH\n";
+      std::cout << "or load the corresponding Python module in order for it to be accessible.\n";
+      throw std::runtime_error("Failed to load method/program.");
+    }
+    // Return Calculator
+    return calc;
+  }
+  else {
+    calc = manager.get<Scine::Core::Calculator>(Scine::Core::Calculator::supports("QMMM"), "Swoose");
+    auto castedCalc = std::dynamic_pointer_cast<Scine::Core::EmbeddingCalculator>(calc);
+    if (!castedCalc) {
+      throw std::runtime_error("Please specify an embedding calculator.");
+    }
+    auto listOfCalculators = determineUnderlyingCalculators(listOfMethods, listOfPrograms);
+    castedCalc->setUnderlyingCalculators(listOfCalculators);
+    return castedCalc;
+  }
+}
+
 /**
  * @brief Give calculator a new logger based on given booleans
  */
@@ -70,7 +163,7 @@ inline void setLog(Core::Calculator& calculator, bool error, bool warning, bool 
  * @param log A Scine logger
  * @param maxSpinDifference The range of the multiplicity checks, e.g. 1 will check m=1 and m=5 for a m=3 system
  */
-inline std::unique_ptr<Core::Calculator> spinPropensity(Core::Calculator& calculator, Core::Log& log, int maxSpinDifference) {
+inline std::shared_ptr<Core::Calculator> spinPropensity(Core::Calculator& calculator, Core::Log& log, int maxSpinDifference) {
   // references
   auto referenceResults = calculator.results();
   auto refSettings = calculator.settings();
@@ -105,7 +198,7 @@ inline std::unique_ptr<Core::Calculator> spinPropensity(Core::Calculator& calcul
       continue;
     }
     auto clone = bestClone->clone();
-    clone->settings().modifyInt(SettingsNames::spinMultiplicity, i);
+    clone->settings().modifyInt(Utils::SettingsNames::spinMultiplicity, i);
     Results result;
     try {
       result = calculateWithCatch(*clone, log, "");
@@ -121,7 +214,7 @@ inline std::unique_ptr<Core::Calculator> spinPropensity(Core::Calculator& calcul
   }
   if (bestCloneEnergy < refEnergy) {
     log.warning << "PropensityWarning: Detected spin multiplicity propensity; changing multiplicity to "
-                << std::to_string(bestClone->settings().getInt(SettingsNames::spinMultiplicity)) << Core::Log::nl;
+                << std::to_string(bestClone->settings().getInt(Utils::SettingsNames::spinMultiplicity)) << Core::Log::nl;
     return bestClone;
   }
   // no propensity
@@ -142,12 +235,31 @@ inline std::pair<std::string, std::string> splitIntoMethodAndDispersion(const st
   // check for exceptions
   // if input contains one of these as a substring
   // we return the input as method and empty dispersion
+  // clang-format off
   std::vector<std::string> exceptions = {
       "PNO-CC",
       "HF-3C",
       "PBEH-3C",
       "B97-3C",
   };
+  // if input contains one of these as a substring
+  // we ignore the number of '-' in the exception and still check for dispersion
+  std::vector<std::string> exceptionsWithPotentialDisp = {
+      "CAM-B3LYP",
+      "M05-2X",
+      "M06-L",
+      "M06-2X",
+      "M06-HF",
+      "M08-HX",
+      "M08-SO",
+      "M11-L",
+      "MN12-L",
+      "MN12-SX",
+      "MN15-L",
+      "LC-PBE",
+      "LC-WPBE",
+  };
+  // clang-format on
   std::string inputCopy(input.size(), 0);
   std::transform(input.begin(), input.end(), inputCopy.begin(), [](unsigned char c) { return std::toupper(c); });
   if (std::any_of(exceptions.begin(), exceptions.end(),
@@ -159,6 +271,24 @@ inline std::pair<std::string, std::string> splitIntoMethodAndDispersion(const st
   std::stringstream ss(input);
   while (std::getline(ss, segment, '-')) {
     segments.push_back(segment);
+  }
+  for (const auto& exceptionMethod : exceptionsWithPotentialDisp) {
+    if (inputCopy.find(exceptionMethod) != std::string::npos) {
+      auto allowed_hyphens = std::count(exceptionMethod.begin(), exceptionMethod.end(), '-');
+      std::vector<std::string> newSegments;
+      newSegments.push_back("");
+      for (int i = 0; i <= allowed_hyphens; ++i) {
+        if (i == 0)
+          newSegments[0] = segments[i];
+        else
+          newSegments[0] += "-" + segments[i];
+      }
+      for (unsigned long i = allowed_hyphens + 1; i < segments.size(); ++i) {
+        newSegments.push_back(segments[i]);
+      }
+      segments = newSegments;
+      break;
+    }
   }
   if (segments.size() > 2) {
     throw std::logic_error("The provided method '" + input +

@@ -8,6 +8,69 @@ It is intended that only the first two groups (``New Features and Feature Update
 ``Important Technical Changes``) are important for the average user, while
 the last one is mainly aimed at developers and users that link deeply into the code.
 
+Release 9.0.0
+-------------
+
+New Features and Feature Updates
+................................
+- Enable calculation of 57-Fe Mössbauer parameters with Orca.
+- Enable DLPNO-CCSD(T)-F12 calculations with Orca.
+- Added a MRCC calculator (requires MRCC executables at the `MRCC_BINARY_PATH` path
+  environment variable).
+  -  Supported methods: DFT, HF, MP2 [LNO-MP2], CC [LNO-CCSD, LNO-CCSD(T)]
+- Added transition state optimizer for QM/MM
+- Molecular trajectories in the PDB file format can now be read.
+
+Important Technical Changes
+...........................
+- Improve support for compilation on Windows (MSVC)
+
+Other
+.....
+- Update address in license
+
+Release 8.0.0
+-------------
+
+New Features and Feature Updates
+................................
+- Turbomole calculator can now calculate Hessians numerically.
+- The DFT grid for the Turbomole calculator can now be varied.
+- The cavity construction for implicit solvation with the Turbomole calculator can now be modified by setting the points and segments per atom.
+- Update Calculator interface helpers to accommodate pure Python3 Calculators.
+- Added distortion of structure along a set of vibrational mode(s) and harmonic inversion point calculation.
+
+Important Technical Changes
+...........................
+- Changed Python state definition of ValueCollection to avoid faulty state for empty ValueCollections.
+
+Release 7.0.0
+-------------
+
+New Features and Feature Updates
+................................
+- A custom implicit solvent may be defined for the Turbomole input creator through
+  its dielectric constant and probe radius.
+- Turbomole calculator can now carry out Hartree-Fock calculations.
+- Orca calculator can now carry out broken-symmetry DFT calculations.
+- Improve comparisons of periodic data structures.
+- Ease communication between forked processes for monitoring calculations.
+- Various bugfixes and improvements
+- Added data structures for interfacing with integral libraries.
+- The BondDetectors can alternatively rely on Van der Waals (VdW) radii instead of covalent radii.
+- The PeriodicSystem generates its bond orders now per default based on VdW radii between solid state atoms.
+- Turbomole calculator can now calculate excited states.
+- The PdbStreamHandler can read multiple models in a pdb file (encoded by the MODEL tag in the file).
+- Add Python bindings for D3/D3BJ dispersion corrections.
+- Add additional setting to external QC calculators that allows to enforce the set SCF convergence criterion.
+- The pressure for free energy calculations may now be changed. Current default 1 atm.
+
+Important Technical Changes
+...........................
+- Add Spglib dependency.
+- Increase pickle support of Python bindings.
+- Optimization related setting names are gathered in a separate namespace and removed from the optimizers.
+
 Release 6.0.0
 -------------
 

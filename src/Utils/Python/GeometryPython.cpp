@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include <Utils/Geometry.h>
@@ -38,6 +38,10 @@ void init_geometry(pybind11::module& m) {
                          "Randomly displace a set of positions with a maximum displacement per coordinate. The "
                          "positions and the maximum displacement have to be given as arguments.",
                          pybind11::arg("positions"), pybind11::arg("maxDisplacement"));
+
+  geometry_submodule.def("displace_along_modes", &Manipulations::displaceAlongModes, pybind11::arg("positions"),
+                         pybind11::arg("modes"), pybind11::arg("stepSizes"),
+                         "Displace a set of positions along vibrational mode(s) with certain step size(s)");
 
   geometry_submodule.def(
       "random_displacement_trajectory",

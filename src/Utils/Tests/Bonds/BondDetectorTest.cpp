@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "Utils/Bonds/BondDetector.h"
@@ -121,6 +121,15 @@ TEST(BondDetectorTest, H2Wrong) {
   BondOrderCollection bo = Utils::BondDetector::detectBonds(h2);
   ASSERT_EQ(bo.getSystemSize(), 2);
   ASSERT_TRUE(bo.empty());
+
+  // but bond with VdW
+  bo = Utils::BondDetector::detectBonds(h2, true);
+  ASSERT_EQ(bo.getSystemSize(), 2);
+  ASSERT_FALSE(bo.empty());
+  ASSERT_EQ(bo.getOrder(0, 0), 0);
+  ASSERT_EQ(bo.getOrder(0, 1), 1);
+  ASSERT_EQ(bo.getOrder(1, 0), 1);
+  ASSERT_EQ(bo.getOrder(1, 1), 0);
 }
 
 TEST(BondDetectorTest, HCNCorrect) {

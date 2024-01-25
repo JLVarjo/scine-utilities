@@ -1,10 +1,11 @@
 __copyright__ = """This file is part of SCINE Utilities.
 This code is licensed under the 3-clause BSD license.
-Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.
+Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.
 See LICENSE.txt for details.
 """
 
 from conans import ConanFile, CMake
+import sys
 
 
 class TestPackageConan(ConanFile):
@@ -27,9 +28,17 @@ class TestPackageConan(ConanFile):
 
     def test(self):
         cmake = self._configure()
-        cmake.test()
+        try:
+            cmake.test(output_on_failure=True)
+        except Exception as e:
+            sys.stderr.write(str(e))
+            raise e
 
         if self.options["scine_utilities"].python:
             self.output.info("Trying to import 'scine_utilities'")
-            import scine_utilities
+            try:
+                import scine_utilities
+            except Exception as e:
+                sys.stderr.write(str(e))
+                raise e
             self.output.info("Import worked!")

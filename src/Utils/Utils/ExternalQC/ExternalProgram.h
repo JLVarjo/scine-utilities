@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef UTILS_EXTERNALQC_EXTERNALPROGRAM_H
@@ -51,6 +51,10 @@ class ExternalProgram {
    * @brief Generate filename by prepending the working directory.
    */
   std::string generateFullFilename(const std::string& filename) const;
+  /**
+   * @brief Getter of file for standard error output.
+   */
+  std::string getErrorOutFile() const;
   /**
    * @brief Setter to write error out to specific file.
    */

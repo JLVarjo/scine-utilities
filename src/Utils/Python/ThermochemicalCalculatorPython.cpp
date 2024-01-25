@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -27,6 +27,7 @@ void init_thermochemical_calculator(pybind11::module& m) {
       pybind11::arg("hessian"), pybind11::arg("elements"), pybind11::arg("positions"), pybind11::arg("multiplicity"),
       pybind11::arg("energy"), "Initialize a thermochemistry calculator");
   thermochemistryCalculator.def("set_temperature", &ThermochemistryCalculator::setTemperature);
+  thermochemistryCalculator.def("set_pressure", &ThermochemistryCalculator::setPressure);
   thermochemistryCalculator.def("set_molecular_symmetry", &ThermochemistryCalculator::setMolecularSymmetryNumber);
   thermochemistryCalculator.def("calculate", &ThermochemistryCalculator::calculate);
 

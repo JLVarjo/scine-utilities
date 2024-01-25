@@ -1,11 +1,12 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include <Utils/Bonds/BondDetector.h>
 #include <Utils/ExternalQC/Exceptions.h>
+#include <Utils/ExternalQC/Orca/MoessbauerParameters.h>
 #include <Utils/ExternalQC/Orca/OrcaCalculator.h>
 #include <Utils/ExternalQC/Orca/OrcaCalculatorSettings.h>
 #include <Utils/ExternalQC/Orca/OrcaHessianOutputParser.h>
@@ -43,6 +44,8 @@ TEST_F(AOrcaTest, SettingsAreSetCorrectly) {
   calculator.settings().modifyInt(Utils::SettingsNames::maxScfIterations, 125);
   calculator.settings().modifyString(Utils::SettingsNames::method, "PBE-D3BJ");
   calculator.settings().modifyString(Utils::SettingsNames::basisSet, "def2-SVP");
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::orcaAuxCBasisSet, "aug-cc-pvDZ");
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::orcaCabsBasisSet, "cc-pVDZ-F12-CABS");
   calculator.settings().modifyString(Utils::SettingsNames::spinMode, "unrestricted");
   calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory, "test_1");
   calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::orcaFilenameBase, "test_2");
@@ -51,8 +54,10 @@ TEST_F(AOrcaTest, SettingsAreSetCorrectly) {
   calculator.settings().modifyDouble(Utils::SettingsNames::temperature, 300.3);
   calculator.settings().modifyString(Utils::SettingsNames::solvation, "cpcm");
   calculator.settings().modifyString(Utils::SettingsNames::solvent, "water");
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::gradientCalculationType, "numerical");
   calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::hessianCalculationType, "numerical");
   calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::specialOption, "NOSOSCF");
+  calculator.settings().modifyBool(ExternalQC::SettingsNames::enforceScfCriterion, true);
 
   ASSERT_TRUE(calculator.settings().valid());
   ASSERT_THAT(calculator.settings().getInt(Utils::SettingsNames::externalProgramNProcs), Eq(2));
@@ -62,6 +67,9 @@ TEST_F(AOrcaTest, SettingsAreSetCorrectly) {
   ASSERT_THAT(calculator.settings().getInt(Utils::SettingsNames::maxScfIterations), Eq(125));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::method), Eq("PBE-D3BJ"));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::basisSet), Eq("def2-SVP"));
+  ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::orcaAuxCBasisSet), Eq("aug-cc-pvDZ"));
+  ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::orcaCabsBasisSet),
+              Eq("cc-pVDZ-F12-CABS"));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::spinMode), Eq("unrestricted"));
   ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory), Eq("test_1"));
   ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::orcaFilenameBase), Eq("test_2"));
@@ -71,9 +79,12 @@ TEST_F(AOrcaTest, SettingsAreSetCorrectly) {
   ASSERT_THAT(calculator.settings().getDouble(Utils::SettingsNames::temperature), Eq(300.3));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::solvation), Eq("cpcm"));
   ASSERT_THAT(calculator.settings().getString(Utils::SettingsNames::solvent), Eq("water"));
+  ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::gradientCalculationType),
+              Eq("numerical"));
   ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::hessianCalculationType),
               Eq("numerical"));
   ASSERT_THAT(calculator.settings().getString(Utils::ExternalQC::SettingsNames::specialOption), Eq("NOSOSCF"));
+  ASSERT_THAT(calculator.settings().getBool(ExternalQC::SettingsNames::enforceScfCriterion), Eq(true));
 }
 
 TEST_F(AOrcaTest, OrbitalEnergiesAreParsedCorrectly) {
@@ -119,10 +130,20 @@ TEST_F(AOrcaTest, ErrorsAreFound) {
   try {
     parser.checkForErrors();
   }
+  catch (const ExternalQC::ScfNotConvergedError&) {
+    errorFound = true;
+  }
+  ASSERT_TRUE(errorFound);
+
+  errorFound = false;
+  ExternalQC::OrcaMainOutputParser parser2((pathToResource / "orca_test_calc_error_no_scf_message.out").string());
+  try {
+    parser2.checkForErrors();
+  }
   catch (const ExternalQC::OutputFileParsingError&) {
     errorFound = true;
   }
-  ASSERT_THAT(errorFound, true);
+  ASSERT_TRUE(errorFound);
 }
 
 TEST_F(AOrcaTest, HirshfeldChargesAreParsedCorrectly) {
@@ -303,6 +324,7 @@ TEST_F(AOrcaTest, StatesHandlingAndInputCreationWorkCorrectly) {
   calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory, pathToResource.string());
   calculator.settings().modifyString(Utils::SettingsNames::method, "PBE-D3BJ");
   calculator.settings().modifyString(Utils::SettingsNames::basisSet, "def2-SVP FORCE_FAILURE");
+  calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::calculateMoessbauerParameter, true);
 
   std::stringstream stream("5\n\n"
                            "C     0.00000000   0.00000001  -0.00000097\n"
@@ -314,7 +336,9 @@ TEST_F(AOrcaTest, StatesHandlingAndInputCreationWorkCorrectly) {
   auto structure = Utils::XyzStreamHandler::read(stream);
 
   calculator.setStructure(structure);
-
+  // As the structure does not contain any iron atoms, the moessbauer setting should be set to false
+  ASSERT_THROW(calculator.calculate(""), std::logic_error);
+  calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::calculateMoessbauerParameter, false);
   // set incorrect charge/multiplicity pair
   calculator.settings().modifyInt(Utils::SettingsNames::molecularCharge, 1);
   ASSERT_THROW(calculator.calculate(""), std::logic_error);
@@ -369,6 +393,100 @@ TEST_F(AOrcaTest, StatesHandlingAndInputCreationWorkCorrectly) {
   input.close();
 
   ASSERT_THAT(line, Eq("! PBE D3BJ def2-SVP FORCE_FAILURE"));
+
+  // Check whether the calculation directory can be deleted.
+  bool isDir = FilesystemHelpers::isDirectory(calculator.getCalculationDirectory());
+  boost::filesystem::remove_all(calculator.getCalculationDirectory());
+  bool deleted = !FilesystemHelpers::isDirectory(calculator.getCalculationDirectory());
+  ASSERT_THAT(isDir, Eq(true));
+  ASSERT_THAT(deleted, Eq(true));
+}
+
+TEST_F(AOrcaTest, InputFileIsCreatedCorrectlyForMoessbauerCalculation) {
+  // Set up.
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory, pathToResource.string());
+  calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::calculateMoessbauerParameter, true);
+
+  std::stringstream stream("12\n\n"
+                           "Fe 0.000000  0.000000  1.312783\n"
+                           "Fe 0.000000  0.000000 -1.312783\n"
+                           "S 0.757448  -1.576802  0.000000\n"
+                           "S -0.757448  1.576802  0.000000\n"
+                           "H 1.970424  -0.062804  3.629778\n"
+                           "S 1.583457   0.881621  2.761494\n"
+                           "H -1.812699 -0.013197  3.755923\n"
+                           "S -1.583457 -0.881621  2.761494\n"
+                           "H -1.964856 -2.090032 -2.325744\n"
+                           "S -1.583457 -0.881621 -2.761494\n"
+                           "H 1.807131   2.166033 -2.451888\n"
+                           "S 1.583457   0.881621 -2.761494\n");
+
+  auto structure = Utils::XyzStreamHandler::read(stream);
+  calculator.setStructure(structure);
+  int numIrons = ExternalQC::Moessbauer::determineNumIrons(structure);
+  ASSERT_THAT(numIrons, Eq(2));
+  try {
+    calculator.calculate("");
+  }
+  catch (Core::UnsuccessfulCalculationException& e) {
+  }
+
+  // Check that the input file was correctly written.
+  std::string line;
+  std::ifstream input;
+  std::string inputFileName =
+      NativeFilenames::combinePathSegments(calculator.getCalculationDirectory(), calculator.getFileNameBase() + ".inp");
+  input.open(inputFileName);
+  bool feBasisSectionFound = false;
+  bool nmrEprSectionFound = false;
+  if (input.is_open()) {
+    while (std::getline(input, line)) {
+      if (line.find("%basis NewGTO 26 \"CP(PPP)\" end") != std::string::npos) {
+        feBasisSectionFound = true;
+      }
+      else if (line.find("%eprnmr nuclei = all Fe {rho, fgrad}") != std::string::npos) {
+        nmrEprSectionFound = true;
+      }
+    }
+  }
+  input.close();
+  ASSERT_TRUE(nmrEprSectionFound);
+  ASSERT_TRUE(feBasisSectionFound);
+}
+
+TEST_F(AOrcaTest, CAMB3LYPWorksCorrectly) {
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory, pathToResource.string());
+  calculator.settings().modifyString(Utils::SettingsNames::method, "CAM-B3LYP-D3BJ");
+  calculator.settings().modifyString(Utils::SettingsNames::basisSet, "def2-SVP FORCE_FAILURE");
+  std::stringstream stream("5\n\n"
+                           "C     0.00000000   0.00000001  -0.00000097\n"
+                           "H     0.62612502   0.62612484   0.62613824\n"
+                           "H    -0.62612503  -0.62612486   0.62613824\n"
+                           "H    -0.62612481   0.62612463  -0.62613657\n"
+                           "H     0.62612481  -0.62612464  -0.62613657\n");
+  auto structure = Utils::XyzStreamHandler::read(stream);
+
+  calculator.setStructure(structure);
+
+  try {
+    calculator.calculate("");
+  }
+  catch (Core::UnsuccessfulCalculationException& e) {
+  }
+
+  std::string inputFileName =
+      NativeFilenames::combinePathSegments(calculator.getCalculationDirectory(), calculator.getFileNameBase() + ".inp");
+  std::ifstream input;
+  input.open(inputFileName);
+  auto content = std::string(std::istreambuf_iterator<char>{input}, {});
+  input.close();
+
+  std::string regexString = "!\\sCAM-B3LYP\\sD3BJ";
+  std::regex regex(regexString);
+  std::smatch matches;
+  bool b = std::regex_search(content, matches, regex);
+
+  ASSERT_TRUE(b);
 
   // Check whether the calculation directory can be deleted.
   bool isDir = FilesystemHelpers::isDirectory(calculator.getCalculationDirectory());
@@ -624,6 +742,35 @@ TEST_F(AOrcaTest, PointChargesGradientsAreCorrectlyParsed) {
   }
 }
 
+TEST_F(AOrcaTest, MoessbauerParametersAreParsedCorrectly) {
+  ExternalQC::OrcaMainOutputParser parser((pathToResource / "orca_moessbauer_test_calc.out").string());
+  parser.checkForErrors();
+  int numIrons = 2;
+  // number of parsed parameters does not match the number of Fe atoms in the structure
+  ASSERT_THROW(parser.getMoessbauerAsymmetryParameter(numIrons), std::runtime_error);
+  numIrons = 4;
+  auto asymParams = parser.getMoessbauerAsymmetryParameter(numIrons);
+  ASSERT_THAT(asymParams.size(), Eq(4));
+  ASSERT_THAT(asymParams.at(0), DoubleNear(0.651064, 1e-6));
+  ASSERT_THAT(asymParams.at(1), DoubleNear(0.820297, 1e-6));
+  ASSERT_THAT(asymParams.at(2), DoubleNear(0.861634, 1e-6));
+  ASSERT_THAT(asymParams.at(3), DoubleNear(0.159512, 1e-6));
+
+  auto quadrupoleSplittings = parser.getMoessbauerQuadrupoleSplittings(numIrons);
+  ASSERT_THAT(quadrupoleSplittings.size(), Eq(4));
+  ASSERT_THAT(quadrupoleSplittings.at(0), DoubleNear(-0.960701, 1e-6));
+  ASSERT_THAT(quadrupoleSplittings.at(1), DoubleNear(0.607762, 1e-6));
+  ASSERT_THAT(quadrupoleSplittings.at(2), DoubleNear(0.820699, 1e-6));
+  ASSERT_THAT(quadrupoleSplittings.at(3), DoubleNear(-0.870399, 1e-6));
+
+  auto feDensities = parser.getMoessbauerIronElectronDensities(numIrons);
+  ASSERT_THAT(feDensities.size(), Eq(4));
+  ASSERT_THAT(feDensities.at(0), DoubleNear(11821.892455723, 1e-8));
+  ASSERT_THAT(feDensities.at(1), DoubleNear(11821.955495631, 1e-8));
+  ASSERT_THAT(feDensities.at(2), DoubleNear(11821.831474737, 1e-8));
+  ASSERT_THAT(feDensities.at(3), DoubleNear(11822.049028714, 1e-8));
+}
+
 TEST_F(AOrcaTest, OrcaCalculationIsPerformedCorrectlyViaScine) {
 #ifndef _WIN32
   const char* envVariablePtr = std::getenv("ORCA_BINARY_PATH");
@@ -676,6 +823,73 @@ TEST_F(AOrcaTest, ScfConvergenceIncreasedForPropertyCalculation) {
   calculator.setRequiredProperties(Property::Energy | Property::Gradients);
   auto thirdCalculator = calculator.clone();
   ASSERT_THAT(thirdCalculator->settings().getDouble(Utils::SettingsNames::selfConsistenceCriterion), Eq(1e-8));
+}
+
+TEST_F(AOrcaTest, BrokenSymmetryCalculationIsSetUpCorrectly) {
+  // set low scf convergence criterion
+  calculator.settings().modifyBool(Utils::ExternalQC::SettingsNames::performBrokenSymmetryCalculation, true);
+  calculator.settings().modifyString(Utils::ExternalQC::SettingsNames::baseWorkingDirectory, pathToResource.string());
+
+  std::stringstream stream("2\n\n"
+                           "O     0.00000000   0.0000000    0.6093992\n"
+                           "O     0.00000000   0.0000000   -0.6093992\n");
+
+  auto structure = Utils::XyzStreamHandler::read(stream);
+
+  calculator.setStructure(structure);
+  // should throw an error first, because no initial spin multiplicity is set
+  std::string exceptionString = "";
+  try {
+    calculator.calculate("");
+  }
+  catch (Core::UnsuccessfulCalculationException& e) {
+    exceptionString = e.what();
+  }
+  ASSERT_STREQ(exceptionString.c_str(),
+               "Please set both the initial (setting name: initial_spin_multiplicity) and the final spin multiplicity "
+               "(setting name: spin_multiplicity) if you want to perform a broken-symmetry calculation.");
+
+  calculator.settings().modifyInt(Utils::ExternalQC::SettingsNames::initialSpinMultiplicity, 3);
+  calculator.settings().modifyInt(Utils::SettingsNames::spinMultiplicity, 2);
+  // A doublet cannot be generated from a triplet via spin flip
+  ASSERT_THROW(calculator.calculate(""), std::logic_error);
+  calculator.settings().modifyInt(Utils::SettingsNames::spinMultiplicity, 1);
+  // should throw an error because no spin flip sites are set
+  try {
+    calculator.calculate("");
+  }
+  catch (Core::UnsuccessfulCalculationException& e) {
+    exceptionString = e.what();
+  }
+  ASSERT_STREQ(exceptionString.c_str(), "Please set the atom indices of all sites at which spin density should be "
+                                        "flipped after converging to the high-spin solution!");
+
+  calculator.settings().modifyIntList(Utils::ExternalQC::SettingsNames::spinFlipSites, {0, 1});
+  try {
+    calculator.calculate("");
+  }
+  catch (Core::UnsuccessfulCalculationException& e) {
+    exceptionString = e.what();
+  }
+
+  std::string inputFile =
+      NativeFilenames::combinePathSegments(calculator.getCalculationDirectory(), calculator.getFileNameBase() + ".inp");
+  ASSERT_TRUE(boost::filesystem::exists(inputFile));
+  std::ifstream input;
+  input.open(inputFile);
+  auto content = std::string(std::istreambuf_iterator<char>{input}, {});
+  input.close();
+
+  std::string regexString = "Flipspin 0, 1";
+  std::regex regex(regexString);
+  std::smatch matches;
+  bool a = std::regex_search(content, matches, regex);
+  ASSERT_TRUE(a);
+
+  regexString = "FinalMs 0.0";
+  std::regex regex2(regexString);
+  bool b = std::regex_search(content, matches, regex2);
+  ASSERT_TRUE(b);
 }
 
 } // namespace Tests

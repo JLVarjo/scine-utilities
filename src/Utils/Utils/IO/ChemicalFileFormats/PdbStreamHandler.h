@@ -2,12 +2,13 @@
  * @file
  * @brief Pdb-formatted streaming IO
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef INCLUDE_SCINE_UTILS_IO_PDB_STREAM_HANDLER_H
 #define INCLUDE_SCINE_UTILS_IO_PDB_STREAM_HANDLER_H
 
+#include "Utils/Bonds/BondOrderCollection.h"
 #include "Utils/IO/ChemicalFileFormats/FormattedStreamHandler.h"
 #include "boost/optional/optional_fwd.hpp"
 
@@ -20,13 +21,15 @@ struct PdbFileData {
   // The header of the PDB file including diverse information.
   std::string header;
   // The atom block of the PDB file
-  std::string atomBlock;
+  std::vector<std::string> atomBlocks;
   // The bond order block of the PDB file
   std::string connectivityBlock;
   // A vector of overlaying substructure identifiers
   std::vector<std::string> overlayIdentifiers;
   // The number of Atoms in the file
   int nAtoms = 0;
+  // The number of models (snapshots) resolved in the structure
+  int numModels = 1;
 };
 
 class AtomCollection;
@@ -53,7 +56,8 @@ class PdbStreamHandler : public FormattedStreamHandler {
    *
    * @note Currently only writes "UNX" as residue identifier.
    */
-  static void write(std::ostream& os, const AtomCollection& atoms, const std::string& comment = "");
+  static void write(std::ostream& os, const AtomCollection& atoms,
+                    BondOrderCollection bondOrders = BondOrderCollection(), const std::string& comment = "");
   /**
    * @brief Reads from an input stream in PDB format
    *
@@ -83,14 +87,23 @@ class PdbStreamHandler : public FormattedStreamHandler {
   // Function to set whether hydrogen atoms should be parse
   void setReadH(bool includeH);
   // Function to set whether solvent molecules should be parsed
-  void setReadHOH(bool includeHOH);
+  void parseOnlySolvent(bool parseOnlySolvent);
   void setSubstructureID(int substructureID);
 
  private:
   static void extractContent(std::istream& is, PdbFileData& data);
+  std::vector<AtomCollection> structuresFromData(PdbFileData& data) const;
+
+  static void extractOverlayIdentifiers(std::string line, PdbFileData& data);
+  static bool isAtomLine(std::string line);
+  static bool isModelLine(std::string line);
+  static void extractModels(std::istringstream& in, std::string& line, PdbFileData& data);
+  static void extractStructure(std::istringstream& in, std::string& line, PdbFileData& data);
   bool includeH_ = true;
-  bool includeHOH_ = true;
+  bool parseOnlySolvent_ = false;
   unsigned int substructureID_ = 0;
+  std::vector<unsigned int> residueIndices_;
+  std::vector<std::string> listOfSupportedSolventMolecules = {"HOH"};
 };
 
 } // namespace Utils

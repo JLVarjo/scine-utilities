@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef UNIVERSALSETTINGS_GENERICVALUE_H
@@ -145,6 +145,7 @@ class GenericValue {
   struct Impl; // Use pimpl idiom to hide boost::any dependency.
   using ImplPtr = std::unique_ptr<Impl>;
   ImplPtr pimpl_;
+  bool isEmptyIntList() const;
 };
 
 bool operator==(const GenericValue& lhs, const GenericValue& rhs);

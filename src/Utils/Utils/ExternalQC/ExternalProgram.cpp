@@ -1,7 +1,7 @@
 /**
  * @filesetWorkingDirectory
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "ExternalProgram.h"
@@ -32,6 +32,10 @@ void ExternalProgram::createWorkingDirectory() {
   if (!workingDirectory_.empty()) {
     FilesystemHelpers::createDirectories(workingDirectory_);
   }
+}
+
+std::string ExternalProgram::getErrorOutFile() const {
+  return _errorOut;
 }
 
 void ExternalProgram::setErrorOutFile(const std::string& filename) {

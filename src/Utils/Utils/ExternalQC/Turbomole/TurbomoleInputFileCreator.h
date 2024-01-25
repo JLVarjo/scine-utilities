@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef UTILS_EXTERNALQC_TURBOMOLEINPUTFILECREATOR_H
@@ -47,6 +47,11 @@ class TurbomoleInputFileCreator {
   void checkAndUpdateControlFile(const Settings& settings);
   // execution of "cosmoprep"
   void addSolvation(const Settings& settings);
+  // interpret user defined solvation settings
+  void interpretAsUserDefinedImplicitSolvation(std::string solvent, double& epsilon, double& probeRadius);
+  // correction for the define input if elements are present with multiple EHT parameter sets.
+  std::string getMultipleEHTParameterCorrection(const AtomCollection& atoms);
+
   std::string& calculationDirectory_;
   std::string& turbomoleExecutableBase_;
   std::string defineExecutableBase_ = "define";
@@ -87,7 +92,8 @@ class TurbomoleInputFileCreator {
       {"thf", std::make_pair(7.58, 3.18)},
       {"toluene", std::make_pair(2.38, 3.48)},
       {"water", std::make_pair(78.39, 1.93)},
-      {"isopropanol", std::make_pair(19.9, 3.12)}};
+      {"isopropanol", std::make_pair(19.9, 3.12)},
+      {"ch2cl2", std::make_pair(8.9, 2.94)}};
 
   const std::vector<std::string> availableDispersionParams_ = {"D3", "D3BJ", "D4"};
 

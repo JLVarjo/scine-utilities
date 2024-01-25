@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "Utils/GeometryOptimization/GeometryOptimization.h"
@@ -189,12 +189,15 @@ class GeoOptMockCalculator : public Core::Calculator {
   bool supportsMethodFamily(const std::string& /*methodFamily*/) const final {
     return true;
   }
+  bool allowsPythonGILRelease() const override {
+    return true;
+  };
 
  private:
   AtomCollection structure_;
   Results r_;
   std::unique_ptr<Settings> settings_;
-  Core::Calculator* cloneImpl() const final {
+  std::shared_ptr<Core::Calculator> cloneImpl() const final {
     return nullptr;
   }
 };
@@ -379,7 +382,7 @@ TEST(GeometryOptimizerTests, Bfgs2) {
   for (unsigned int i = 0; i < reference.array().size(); i++) {
     EXPECT_NEAR(reference.data()[i], positions.data()[i], 1.0e-8);
   }
-  ASSERT_EQ(nIter, 135);
+  ASSERT_EQ(nIter, 108);
   // Increase minimum number of iterations
   geo.optimizer.minIter = 2;
   auto nIter2 = geo.optimize(atoms, logger);

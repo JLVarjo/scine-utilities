@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "OrcaMainOutputParser.h"
@@ -10,9 +10,10 @@
 #include <Utils/IO/Regex.h>
 #include <boost/filesystem.hpp>
 #include <fstream>
-#include <iostream>
+#include <iomanip>
 #include <iterator>
 #include <regex>
+
 namespace Scine {
 namespace Utils {
 namespace ExternalQC {
@@ -33,9 +34,14 @@ void OrcaMainOutputParser::extractContent(const std::string& filename) {
 }
 
 void OrcaMainOutputParser::checkForErrors() const {
-  std::regex r1(R"(E\s?R\s?R\s?O\s?R\s?)");
-  std::smatch m1;
-  if (std::regex_search(content_, m1, r1)) {
+  std::regex rScf(R"(SCF NOT CONVERGED)");
+  std::smatch mScf;
+  if (std::regex_search(content_, mScf, rScf)) {
+    throw ScfNotConvergedError("ORCA could not converge the SCF.");
+  }
+  std::regex rGeneral(R"(E\s?R\s?R\s?O\s?R\s?)");
+  std::smatch mGeneral;
+  if (std::regex_search(content_, mGeneral, rGeneral)) {
     throw OutputFileParsingError("ORCA encountered an error during the calculation.");
   }
 }
@@ -342,6 +348,71 @@ double OrcaMainOutputParser::getSymmetryNumber() const {
     throw OutputFileParsingError("Symmetry number could not be read from ORCA output.");
   }
   return std::stod(matches[matches.size() - 1]);
+}
+
+std::vector<double> OrcaMainOutputParser::getMoessbauerAsymmetryParameter(int numIrons) const {
+  std::vector<double> asymmetryParameter;
+  std::string regexString = R"(eta     =+ +([-\.0-9]+))";
+  std::regex r(regexString);
+
+  bool found = false;
+  for (std::sregex_iterator iter(content_.begin(), content_.end(), r); iter != std::sregex_iterator(); iter++) {
+    found = true;
+    double eta = std::stod((*iter)[1]);
+    asymmetryParameter.push_back(eta);
+  }
+  if (!found) {
+    throw OutputFileParsingError("Moessbauer section with asymmetry parameters could not be found in ORCA output.");
+  }
+  if (int(asymmetryParameter.size()) != numIrons) {
+    throw OutputFileParsingError("Could not parse asymmetry parameters for all iron atoms in the structure!");
+  }
+  return asymmetryParameter;
+}
+
+std::vector<double> OrcaMainOutputParser::getMoessbauerQuadrupoleSplittings(int numIrons) const {
+  // unit: mm/s
+  std::vector<double> quadrupoleSplittings;
+  std::string regexString = R"(Delta-EQ=\([^)]*\) =+ +([-\.0-9]+) +MHz =+ +([-\.0-9]+) +mm/s)";
+  std::regex r(regexString);
+
+  bool found = false;
+  for (std::sregex_iterator iter(content_.begin(), content_.end(), r); iter != std::sregex_iterator(); iter++) {
+    found = true;
+    double deltaEQ = std::stod((*iter)[2]);
+    quadrupoleSplittings.push_back(deltaEQ);
+  }
+  if (!found) {
+    throw OutputFileParsingError(
+        "Moessbauer section with quadrupole splitting parameters could not be found in ORCA output.");
+  }
+  if (int(quadrupoleSplittings.size()) != numIrons) {
+    throw OutputFileParsingError(
+        "Could not parse quadrupole splitting parameters for all iron atoms in the structure!");
+  }
+  return quadrupoleSplittings;
+}
+
+std::vector<double> OrcaMainOutputParser::getMoessbauerIronElectronDensities(int numIrons) const {
+  // unit: a.u.^-3
+  std::vector<double> moessbauerIronElectronDensities;
+  std::string regexString = R"(RHO\(0\)=+ +([-\.0-9]+) +a\.u\.\*\*-3+)";
+  std::regex r(regexString);
+
+  bool found = false;
+  for (std::sregex_iterator iter(content_.begin(), content_.end(), r); iter != std::sregex_iterator(); iter++) {
+    found = true;
+    double rho0 = std::stod((*iter)[1]);
+    moessbauerIronElectronDensities.push_back(rho0);
+  }
+  if (!found) {
+    throw OutputFileParsingError("Moessbauer section with iron electron densities could not be found in ORCA output.");
+  }
+
+  if (int(moessbauerIronElectronDensities.size()) != numIrons) {
+    throw OutputFileParsingError("Could not parse RHO(0) for all iron atoms in the structure!");
+  }
+  return moessbauerIronElectronDensities;
 }
 
 } // namespace ExternalQC

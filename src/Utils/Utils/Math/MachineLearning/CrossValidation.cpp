@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -51,7 +51,7 @@ std::pair<double, double> CrossValidation::evaluateRegressionModel(const Eigen::
 
 #pragma omp parallel
   {
-    std::unique_ptr<RegressionModel> localModel = model_.clone();
+    auto localModel = model_.clone();
 #pragma omp for schedule(dynamic)
     for (int i = 0; i < k_; ++i) {
       performIteration(i, absoluteErrors, *localModel);

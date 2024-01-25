@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -62,6 +62,7 @@ class SettingPopulator {
   static void addSpinMultiplicity(SettingsCollection& settings);
   static void addSpinMode(SettingsCollection& settings);
   static void addTemperatureOption(SettingsCollection& settings);
+  static void addPressureOption(SettingsCollection& settings);
   static void addElectronicTemperatureOption(SettingsCollection& settings);
   static void addSymmetryNumberOption(SettingsCollection& settings);
 

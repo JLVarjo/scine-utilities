@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -63,6 +63,10 @@ class Optimizer {
    */
   void addObserver(std::function<void(const int&, const double&, const Eigen::VectorXd&)> function) {
     _observers.push_back(std::move(function));
+  }
+
+  std::vector<std::function<void(const int&, const double&, const Eigen::VectorXd&)>> getObservers() const {
+    return _observers;
   }
   /**
    * @brief Clear all existing observer functions.
@@ -161,6 +165,8 @@ class Optimizer {
     }
     /* return false as soon as the difference of values is not alternating signs */
     bool previousPositive = ((_valueMemory[0] - _valueMemory[1]) > 0.0);
+    if (std::abs(_valueMemory[0] - _valueMemory[1]) < 1e-12)
+      return false;
     for (unsigned i = 2; i < maxValueMemory; ++i) {
       const bool thisPositive = ((_valueMemory[i - 1] - _valueMemory[i]) > 0.0);
       if (previousPositive == thisPositive) {

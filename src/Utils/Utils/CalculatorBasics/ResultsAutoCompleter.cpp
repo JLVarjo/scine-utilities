@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -42,6 +42,10 @@ void ResultsAutoCompleter::setDefaultWantedProperties() {
 
 void ResultsAutoCompleter::setTemperature(double temperature) {
   temperature_ = temperature;
+}
+
+void ResultsAutoCompleter::setPressure(double pressure) {
+  pressure_ = pressure;
 }
 
 void ResultsAutoCompleter::setMolecularSymmetryNumber(int sigma) {
@@ -102,6 +106,7 @@ void ResultsAutoCompleter::generateThermochemistry(Results& results, const AtomC
       std::make_unique<ThermochemistryCalculator>(results.get<Property::Hessian>(), atomCollection.getElements(),
                                                   atomCollection.getPositions(), spinMultiplicity, electronicEnergy);
   thermochemistryCalculator->setTemperature(temperature_);
+  thermochemistryCalculator->setPressure(pressure_);
   // TODO: When available incorporate molassembler's symmetry detection here
   thermochemistryCalculator->setMolecularSymmetryNumber(sigma_);
   thermochemistryCalculator->setZPVEInclusion(zpveIncluded_);

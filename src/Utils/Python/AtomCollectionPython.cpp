@@ -1,10 +1,11 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include <Utils/Geometry/AtomCollection.h>
+#include <Utils/Geometry/ElementInfo.h>
 #include <pybind11/eigen.h>
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
@@ -25,6 +26,14 @@ void init_atom_collection(pybind11::module& m) {
   atom_collection.def("set_element", &AtomCollection::setElement, "Set an element type");
   atom_collection.def("get_element", &AtomCollection::getElement, "Get an element type");
 
+  atom_collection.def_property("residues", &AtomCollection::getResidues, &AtomCollection::setResidues,
+                               "The residue information (residue label, chain label, residue index)");
+
+  atom_collection.def("set_residue_info", &AtomCollection::setResidueInformation,
+                      "Set the residue information (residue label, chain label, residue index)");
+  atom_collection.def("get_residue_info", &AtomCollection::getResidueInformation,
+                      "Get the residue information (residue label, chain label, residue index)");
+
   atom_collection.def_property("positions", &AtomCollection::getPositions, &AtomCollection::setPositions,
                                "All positions of the collection");
 
@@ -37,10 +46,27 @@ void init_atom_collection(pybind11::module& m) {
   atom_collection.def("resize", &AtomCollection::resize, "Resize the collection. Does not preserve contained data.");
   atom_collection.def("at", &AtomCollection::at, "Access a particular atom");
   atom_collection.def("push_back", &AtomCollection::push_back, "Add a new atom");
+  atom_collection.def("append", &AtomCollection::push_back, "Add a new atom");
+  atom_collection.def("swap_indices", &AtomCollection::swapIndices, pybind11::arg("i"), pybind11::arg("j"),
+                      "Swap two atoms by the specified indices");
 
   // Comparison operators
   atom_collection.def(pybind11::self == pybind11::self);
   atom_collection.def(pybind11::self != pybind11::self);
+  atom_collection.def("is_approx", &AtomCollection::isApprox, pybind11::arg("other_system"),
+                      pybind11::arg("epsilon") = 1e-6, "Allows to set the accuracy of the fuzzy comparison.");
+  atom_collection.def(
+      "__lt__", [&](const AtomCollection& lhs, const AtomCollection& rhs) -> bool { return lhs.size() < rhs.size(); },
+      pybind11::arg("other_system"), "AtomCollections are compared based on their size");
+  atom_collection.def(
+      "__le__", [&](const AtomCollection& lhs, const AtomCollection& rhs) -> bool { return lhs.size() <= rhs.size(); },
+      pybind11::arg("other_system"), "AtomCollections are compared based on their size");
+  atom_collection.def(
+      "__gt__", [&](const AtomCollection& lhs, const AtomCollection& rhs) -> bool { return lhs.size() > rhs.size(); },
+      pybind11::arg("other_system"), "AtomCollections are compared based on their size");
+  atom_collection.def(
+      "__ge__", [&](const AtomCollection& lhs, const AtomCollection& rhs) -> bool { return lhs.size() >= rhs.size(); },
+      pybind11::arg("other_system"), "AtomCollections are compared based on their size");
 
   // Addition operators
   atom_collection.def(pybind11::self + pybind11::self);
@@ -110,4 +136,23 @@ void init_atom_collection(pybind11::module& m) {
   atom_collection.def("__deepcopy__", [](const AtomCollection& c, pybind11::dict /* memo */) -> AtomCollection {
     return AtomCollection(c);
   });
+  atom_collection.def(pybind11::pickle(
+      [](const AtomCollection& ac) { // __getstate__
+        /* Return a tuple that fully encodes the state of the object */
+        std::vector<std::string> elements;
+        for (const auto& e : ac.getElements()) {
+          elements.push_back(ElementInfo::symbol(e));
+        }
+        return pybind11::make_tuple(elements, ac.getPositions());
+      },
+      [](pybind11::tuple t) { // __setstate__
+        if (t.size() != 2)
+          throw std::runtime_error("Invalid state for AtomCollection!");
+        ElementTypeCollection elements;
+        for (const auto& e : t[0].cast<std::vector<std::string>>()) {
+          elements.push_back(ElementInfo::elementTypeForSymbol(e));
+        }
+        AtomCollection ac(elements, t[1].cast<PositionCollection>());
+        return ac;
+      }));
 }

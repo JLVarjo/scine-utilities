@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -23,7 +23,8 @@ namespace BSplines {
 class InterpolationGenerator : public Generator {
  public:
   /*! @param dataPoints number rows = number of points, number of cols = dimension */
-  explicit InterpolationGenerator(const Eigen::MatrixXd& dataPoints, unsigned degree = 3, bool uniformKnotVector = false);
+  explicit InterpolationGenerator(const Eigen::Ref<const Eigen::MatrixXd>& dataPoints, unsigned degree = 3,
+                                  bool uniformKnotVector = false);
 
  private:
   Eigen::VectorXd generateKnotVector() override;

@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -43,8 +43,8 @@ auto dispatchWrite(const std::string& suffix, OStream& os, Args... args) {
   std::vector<std::unique_ptr<FormattedStreamHandler>> handlers;
   handlers.emplace_back(new MolStreamHandler());
   handlers.emplace_back(new XyzStreamHandler());
-  handlers.emplace_back(new OpenBabelStreamHandler());
   handlers.emplace_back(new PdbStreamHandler());
+  handlers.emplace_back(new OpenBabelStreamHandler());
 
   for (auto& handlerPtr : handlers) {
     if (handlerPtr->formatSupported(suffix, FormattedStreamHandler::SupportType::WriteOnly)) {

@@ -44,7 +44,7 @@ commands::
     git submodule update
     mkdir build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../inst ..
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../inst -DSCINE_BUILD_PYTHON_BINDINGS=ON ..
     make -j 4
     make UtilsOSDocumentation
     make test
@@ -74,4 +74,5 @@ SCINE Utilities makes use of the following third-party libraries:
 - `IRC <https://github.com/rmeli/irc>`_
 - `LBFGSB <https://github.com/yixuan/LBFGSpp>`_
 - `pybind11 <https://github.com/pybind/pybind11>`_
+- `Spglib <https://github.com/spglib/spglib>`_
 - `yaml-cpp <https://github.com/jbeder/yaml-cpp>`_

@@ -2,7 +2,7 @@
  * @file
  * @brief XYZ-formatted streaming IO
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef INCLUDE_SCINE_UTILS_IO_XYZ_STREAM_H
@@ -37,6 +37,9 @@ class XyzStreamHandler : public FormattedStreamHandler {
   //!@name Static members
   //!@{
   static AtomCollection read(std::istream& is);
+
+  static std::pair<AtomCollection, std::vector<bool>> readNuclearElectronic(std::istream& is);
+
   static void write(std::ostream& os, const AtomCollection& atoms, const std::string& comment = "");
   //!@}
 

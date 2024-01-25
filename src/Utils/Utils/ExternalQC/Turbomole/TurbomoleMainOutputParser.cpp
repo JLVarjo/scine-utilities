@@ -1,16 +1,19 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include "TurbomoleMainOutputParser.h"
+#include "Utils/MSVCCompatibility.h"
 #include <Utils/Bonds/BondOrderCollection.h>
 #include <Utils/ExternalQC/Exceptions.h>
 #include <Utils/IO/Regex.h>
+#include <Utils/Strings.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <boost/process.hpp>
 #include <fstream>
 #include <iterator>
 #include <regex>
@@ -21,7 +24,7 @@ namespace Utils {
 namespace ExternalQC {
 
 TurbomoleMainOutputParser::TurbomoleMainOutputParser(TurbomoleFiles& files) : files_(files) {
-  extractContent(files.ridftFile);
+  extractContent(files.outputFile);
 }
 
 void TurbomoleMainOutputParser::extractContent(const std::string& filename) {
@@ -47,6 +50,41 @@ int TurbomoleMainOutputParser::getNumberAtoms() const {
   }
   atoms.close();
   return nAtoms;
+}
+
+int TurbomoleMainOutputParser::getNumberOfNonZeroPointCharges() const {
+  std::ifstream pc;
+  pc.open(files_.pointChargesFile);
+  std::string line;
+
+  int numPointCharges = 0;
+  while (std::getline(pc, line)) {
+    std::vector<std::string> lineSplitted = splitOnSpaceWithoutResultingSpace(line);
+    if (lineSplitted.size() != 4) {
+      std::string error = "Point charges file " + files_.pointChargesFile +
+                          " has an incorrect format due to the line:\n" + line + "\nwhich we split into the vector\n[";
+      for (const auto& v : lineSplitted) {
+        error += v + ", ";
+      }
+      error += "]\n";
+      throw std::runtime_error(error);
+    }
+    try {
+      std::stod(lineSplitted[0]);
+      std::stod(lineSplitted[1]);
+      std::stod(lineSplitted[2]);
+      double charge = std::stod(lineSplitted[3]);
+      if (std::fabs(charge) > 1e-6) {
+        numPointCharges++;
+      }
+    }
+    catch (std::exception& e) {
+      throw std::runtime_error("Point charges file " + files_.pointChargesFile + " has an incorrect format!:\n" +
+                               e.what() + "\noccured due to the line:\n" + line);
+    }
+  }
+  pc.close();
+  return numPointCharges;
 }
 
 GradientCollection TurbomoleMainOutputParser::getGradients() const {
@@ -84,16 +122,18 @@ GradientCollection TurbomoleMainOutputParser::getGradients() const {
 }
 
 GradientCollection TurbomoleMainOutputParser::getPointChargesGradients() const {
-  int nAtoms = getNumberAtoms();
+  int nPointCharges = getNumberOfNonZeroPointCharges();
+  if (nPointCharges == 0) {
+    throw std::runtime_error("Error parsing the point charges!");
+  }
   GradientCollection gc;
-  gc.resize(nAtoms, 3);
+  gc.resize(nPointCharges, 3);
 
   std::ifstream in(files_.pointChargeGradientFile);
-
   // skip first line
   std::string line;
   std::getline(in, line);
-  for (int i = 0; i < nAtoms; i++) {
+  for (int i = 0; i < nPointCharges; i++) {
     std::array<std::string, 3> s;
     in >> s[0] >> s[1] >> s[2];
     for (std::string& j : s) {
@@ -108,7 +148,9 @@ GradientCollection TurbomoleMainOutputParser::getPointChargesGradients() const {
       gc(i, 2) = std::stod(s[2]);
     }
     catch (...) {
-      throw OutputFileParsingError("Gradient file " + files_.pointChargeGradientFile + " could not be parsed.");
+      throw OutputFileParsingError("Gradient file " + files_.pointChargeGradientFile + " for n point charges " +
+                                   std::to_string(nPointCharges) + " could not be parsed due to line " + s[0] + s[1] +
+                                   s[2] + " at line " + std::to_string(i));
     }
   }
 
@@ -130,6 +172,27 @@ double TurbomoleMainOutputParser::getEnergy() const {
     throw OutputFileParsingError("Energy could not be read from Turbomole output.");
 
   return std::stod(m[1]);
+}
+
+double TurbomoleMainOutputParser::getExcitedStateEnergy(int state) const {
+  std::ifstream in;
+  in.open(files_.escfFile);
+  std::string content = std::string(std::istreambuf_iterator<char>{in}, {});
+  in.close();
+
+  std::regex regex(std::string("\\s+") + std::to_string(state) + " a excitation\\s+Total energy:\\s+(-?)\\d+\\.\\d+");
+  std::smatch m;
+  bool found = std::regex_search(content, m, regex);
+  if (!found) {
+    throw OutputFileParsingError("Excited state energy could not be read from Turbomole output.");
+  }
+
+  std::string line = m[0].str();
+  std::string delimiter = ":";
+  int index = line.find(delimiter) + delimiter.size();
+  std::string substring = line.substr(index, line.size());
+
+  return std::stod(substring);
 }
 
 Utils::BondOrderCollection TurbomoleMainOutputParser::getBondOrders() const {
@@ -164,8 +227,13 @@ Utils::BondOrderCollection TurbomoleMainOutputParser::getBondOrders() const {
   return bondOrders;
 }
 
-void TurbomoleMainOutputParser::checkForErrors() const {
-  std::regex regex("(convergence criteria cannot be satisfied)");
+void TurbomoleMainOutputParser::checkForErrors(Core::Log& log) const {
+  const std::regex cosmoWarning(R"(WARNING: COSMO detected\s+(\d+)\s?disjunct cavities)");
+  std::smatch cosmoMatch;
+  if (std::regex_search(content_, cosmoMatch, cosmoWarning)) {
+    log.warning << "Multiple (" << cosmoMatch[1] << ") COSMO cavities were constructed " << Core::Log::nl;
+  }
+  const std::regex regex("(convergence criteria cannot be satisfied)");
   std::smatch match;
   if (std::regex_search(content_, match, regex)) {
     throw ScfNotConvergedError("SCF in Turbomole calculation did not converge.");

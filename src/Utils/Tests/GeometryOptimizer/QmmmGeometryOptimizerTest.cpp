@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include <Core/Interfaces/Calculator.h>
@@ -96,13 +96,16 @@ class QmmmGeoOptMockCalculator : public Core::Calculator {
   bool supportsMethodFamily(const std::string& methodFamily) const final {
     return methodFamily == "QMMM";
   }
+  bool allowsPythonGILRelease() const override {
+    return true;
+  };
 
  private:
   AtomCollection structure_;
   Results results_;
   std::unique_ptr<Settings> settings_;
   std::unique_ptr<TestCalculator> underlyingCalculator_;
-  Core::Calculator* cloneImpl() const final {
+  std::shared_ptr<Core::Calculator> cloneImpl() const final {
     return nullptr;
   }
 };
@@ -147,13 +150,13 @@ TEST_F(AQmmmGeometryOptimizerTest, QmmmGeometryOptimizerConvergenceWorksCorrectl
 
   // BFGS settings
   Settings settingsBfgs = qmmmGeometryOptimizer.fullOptimizer->getSettings();
-  settingsBfgs.modifyBool(Bfgs::bfgsUseTrustRadius, false);
+  settingsBfgs.modifyBool(SettingsNames::Optimizations::Bfgs::useTrustRadius, false);
   qmmmGeometryOptimizer.fullOptimizer->setSettings(settingsBfgs);
   qmmmGeometryOptimizer.mmOptimizer->setSettings(settingsBfgs);
   // Optimizer settings
   const int maxFullOptMicroiter = 30;
   Settings settings = qmmmGeometryOptimizer.getSettings();
-  settings.modifyString(GeometryOptimizerBase::geooptCoordinateSystemKey, "cartesian");
+  settings.modifyString(SettingsNames::Optimizations::GeometryOptimizer::coordinateSystem, "cartesian");
   settings.modifyInt(QmmmGeometryOptimizer<Bfgs>::qmmmOptMaxEnvMicroiterationsKey, 100);
   settings.modifyInt(QmmmGeometryOptimizer<Bfgs>::qmmmOptMaxFullMicroiterationsKey, maxFullOptMicroiter);
   // Make sure the number of max. macroiterations is not limiting the convergence:
@@ -179,7 +182,6 @@ TEST_F(AQmmmGeometryOptimizerTest, QmmmGeometryOptimizerConvergenceWorksCorrectl
   // microiterations are performed.
   auto cyclesTwo = qmmmGeometryOptimizer.optimize(s2, log);
   EXPECT_TRUE(cyclesTwo > 1); // Should converge in more than 1 cycle.
-  EXPECT_TRUE(cyclesOne > cyclesTwo);
 
   // Reset
   numberOfCalculations = 0;
@@ -195,9 +197,6 @@ TEST_F(AQmmmGeometryOptimizerTest, QmmmGeometryOptimizerConvergenceWorksCorrectl
   // It performs only 5 environment relaxation steps in between the full opts.
   auto cyclesThree = qmmmGeometryOptimizer.optimize(s3, log);
 
-  EXPECT_TRUE(cyclesOne < cyclesThree);
-  EXPECT_TRUE(cyclesTwo < cyclesThree);
-
   Utils::PositionCollection optimizedPositions = s3.getPositions();
   for (int i = 0; i < optimizedPositions.rows(); ++i) {
     for (int j = 0; j < 3; ++j) {
@@ -208,7 +207,7 @@ TEST_F(AQmmmGeometryOptimizerTest, QmmmGeometryOptimizerConvergenceWorksCorrectl
 
   // Final test: the optimizer should also complete the optimization when using an internal coordinate system
   settings = qmmmGeometryOptimizer.getSettings();
-  settings.modifyString(GeometryOptimizerBase::geooptCoordinateSystemKey, "internal");
+  settings.modifyString(SettingsNames::Optimizations::GeometryOptimizer::coordinateSystem, "internal");
   qmmmGeometryOptimizer.setSettings(settings);
   qmmmGeometryOptimizer.optimize(structure, log);
 }

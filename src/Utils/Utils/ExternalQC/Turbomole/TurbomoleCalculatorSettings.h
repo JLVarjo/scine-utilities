@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef UTILS_TURBOMOLECALCULATORSETTINGS_H
@@ -34,6 +34,8 @@ class TurbomoleCalculatorSettings : public Scine::Utils::Settings {
   void addNumProcs(UniversalSettings::DescriptorCollection& settings);
   void addBaseWorkingDirectory(UniversalSettings::DescriptorCollection& settings);
   void addTemperature(UniversalSettings::DescriptorCollection& settings);
+  void addPressure(UniversalSettings::DescriptorCollection& settings);
+  void addHessianCalculationType(UniversalSettings::DescriptorCollection& settings);
   void addElectronicTemperature(UniversalSettings::DescriptorCollection& settings);
   void addScfDamping(UniversalSettings::DescriptorCollection& settings);
   void addScfDampingValue(UniversalSettings::DescriptorCollection& settings);
@@ -42,6 +44,13 @@ class TurbomoleCalculatorSettings : public Scine::Utils::Settings {
   void addSolvation(UniversalSettings::DescriptorCollection& settings);
   void addSteerOrbitals(UniversalSettings::DescriptorCollection& settings);
   void addPointChargesFile(UniversalSettings::DescriptorCollection& settings);
+  void addEnableRi(UniversalSettings::DescriptorCollection& settings);
+  void addNumExcitedStates(UniversalSettings::DescriptorCollection& settings);
+  void addScfCriterionEnforce(UniversalSettings::DescriptorCollection& settings);
+  void addDftGrid(UniversalSettings::DescriptorCollection& settings);
+  void addCavityPointsPerAtom(UniversalSettings::DescriptorCollection& settings);
+  void addCavitySegmentsPerAtom(UniversalSettings::DescriptorCollection& settings);
+  void addEnforceNumforce(UniversalSettings::DescriptorCollection& settings);
 
   /**
    * @brief Constructor that populates the TurbomoleCalculatorSettings.
@@ -57,14 +66,23 @@ class TurbomoleCalculatorSettings : public Scine::Utils::Settings {
     addNumProcs(_fields);
     addBaseWorkingDirectory(_fields);
     addTemperature(_fields);
+    addPressure(_fields);
     addScfDamping(_fields);
     addScfDampingValue(_fields);
     addScfOrbitalShift(_fields);
+    addHessianCalculationType(_fields);
     addElectronicTemperature(_fields);
     addSolvent(_fields);
     addSolvation(_fields);
     addSteerOrbitals(_fields);
     addPointChargesFile(_fields);
+    addEnableRi(_fields);
+    addNumExcitedStates(_fields);
+    addScfCriterionEnforce(_fields);
+    addDftGrid(_fields);
+    addCavityPointsPerAtom(_fields);
+    addCavitySegmentsPerAtom(_fields);
+    addEnforceNumforce(_fields);
     resetToDefaults();
   };
 };
@@ -141,6 +159,12 @@ inline void TurbomoleCalculatorSettings::addTemperature(UniversalSettings::Descr
   settings.push_back(Utils::SettingsNames::temperature, std::move(temperature));
 }
 
+inline void TurbomoleCalculatorSettings::addPressure(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::DoubleDescriptor pressure("Sets the pressure for the thermochemical calculation in Pa.");
+  pressure.setDefaultValue(101325.0);
+  settings.push_back(Utils::SettingsNames::pressure, std::move(pressure));
+}
+
 inline void TurbomoleCalculatorSettings::addScfDamping(UniversalSettings::DescriptorCollection& settings) {
   Utils::UniversalSettings::BoolDescriptor scfDamping("Enable stronger SCF damping (true/false).");
   scfDamping.setDefaultValue(false);
@@ -155,10 +179,18 @@ inline void TurbomoleCalculatorSettings::addScfDampingValue(UniversalSettings::D
 
 inline void TurbomoleCalculatorSettings::addScfOrbitalShift(UniversalSettings::DescriptorCollection& settings) {
   Utils::UniversalSettings::DoubleDescriptor scfOrbitalShift(
-      "Shift closed shells to lower energies to aid convergence.");
+      "Shift virtual orbitals to higher energies to aid convergence.");
   // internal default
-  scfOrbitalShift.setDefaultValue(0.4);
+  scfOrbitalShift.setDefaultValue(0.1);
   settings.push_back(SettingsNames::scfOrbitalShift, std::move(scfOrbitalShift));
+}
+
+inline void TurbomoleCalculatorSettings::addHessianCalculationType(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::OptionListDescriptor hessianType("The method for calculating the Hessian.");
+  hessianType.addOption("analytical");
+  hessianType.addOption("numerical");
+  hessianType.setDefaultOption("analytical");
+  settings.push_back(ExternalQC::SettingsNames::hessianCalculationType, std::move(hessianType));
 }
 
 inline void TurbomoleCalculatorSettings::addElectronicTemperature(UniversalSettings::DescriptorCollection& settings) {
@@ -195,6 +227,70 @@ inline void TurbomoleCalculatorSettings::addPointChargesFile(UniversalSettings::
       "charges file is <x> <y> <z> <q>.");
   pointChargesFile.setDefaultValue("");
   settings.push_back(SettingsNames::pointChargesFile, std::move(pointChargesFile));
+}
+
+inline void TurbomoleCalculatorSettings::addEnableRi(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::BoolDescriptor enableRi("Enables the Resolution of the Identity Approximation.");
+  enableRi.setDefaultValue(true);
+  settings.push_back(SettingsNames::enableRi, std::move(enableRi));
+}
+
+inline void TurbomoleCalculatorSettings::addNumExcitedStates(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::IntDescriptor numExcitedStates(
+      "The total number of electronically excited states to be calculated. Note that properties such as energy "
+      "and nuclear gradients are only calculated for the highest excited state.");
+  numExcitedStates.setDefaultValue(0);
+  numExcitedStates.setMinimum(0);
+  settings.push_back(SettingsNames::numExcitedStates, std::move(numExcitedStates));
+}
+
+inline void TurbomoleCalculatorSettings::addScfCriterionEnforce(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::BoolDescriptor scfEnforce(
+      "Whether the set self_consistence_criterion should not be made stricter, "
+      "even if derivative quantities are calculated.");
+  scfEnforce.setDefaultValue(false);
+  settings.push_back(SettingsNames::enforceScfCriterion, std::move(scfEnforce));
+}
+
+inline void TurbomoleCalculatorSettings::addDftGrid(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::OptionListDescriptor dftGrid(
+      "Specify DFT grid to be used."
+      "Possible grids range from 1-7 and m3-m5, respectively, where 1 is coarse and 7 most dense.");
+  // Add all possible options
+  dftGrid.addOption("m3");
+  dftGrid.addOption("m4");
+  dftGrid.addOption("m5");
+  for (int i = 1; i < 8; i++) {
+    dftGrid.addOption(std::to_string(i));
+  }
+  // Set Default value
+  dftGrid.setDefaultOption("m3");
+  settings.push_back(SettingsNames::dftGrid, std::move(dftGrid));
+}
+
+inline void TurbomoleCalculatorSettings::addCavityPointsPerAtom(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::IntDescriptor cavityPointsPerAtom(
+      "The number basis grid points per atom for the cavity construction"
+      "Allowed values must fulfill: i = 10 * 3^k * 4^l + 2");
+  cavityPointsPerAtom.setDefaultValue(1082);
+  cavityPointsPerAtom.setMinimum(12);
+  settings.push_back(SettingsNames::cavityPointsPerAtom, std::move(cavityPointsPerAtom));
+}
+
+inline void TurbomoleCalculatorSettings::addCavitySegmentsPerAtom(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::IntDescriptor cavitySegmentsPerAtom(
+      "The number of segments per atom for the cavity construction"
+      "Allowed values must fulfill: i = 10 * 3^k * 4^l + 2");
+  cavitySegmentsPerAtom.setDefaultValue(92);
+  cavitySegmentsPerAtom.setMinimum(12);
+  settings.push_back(SettingsNames::cavitySegmentsPerAtom, std::move(cavitySegmentsPerAtom));
+}
+
+inline void TurbomoleCalculatorSettings::addEnforceNumforce(UniversalSettings::DescriptorCollection& settings) {
+  Utils::UniversalSettings::BoolDescriptor enforceNumforce(
+      "Whether Turbomole should skip its gradient check when performing numforce.");
+  enforceNumforce.setDefaultValue(false);
+  settings.push_back(SettingsNames::enforceNumforce, std::move(enforceNumforce));
 }
 
 } // namespace ExternalQC

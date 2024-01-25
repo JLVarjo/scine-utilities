@@ -1,11 +1,12 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #include <Core/Interfaces/Calculator.h>
 #include <Core/Interfaces/CalculatorWithReference.h>
+#include <Core/Module.h>
 #include <Core/ModuleManager.h>
 #include <Utils/Pybind.h>
 
@@ -13,6 +14,10 @@ using namespace Scine::Core;
 
 void module_manager_load(ModuleManager& manager, const std::string& filename) {
   manager.load(filename);
+}
+
+void module_manager_load_module(ModuleManager& manager, std::shared_ptr<Module> module) {
+  manager.load(module);
 }
 
 using GetVariantType = boost::variant<std::shared_ptr<Calculator>, std::shared_ptr<CalculatorWithReference>>;
@@ -41,8 +46,7 @@ bool module_manager_has(ModuleManager& manager, const std::string& interface, co
 }
 
 void init_module_manager(pybind11::module& m) {
-  pybind11::class_<ModuleManager, std::unique_ptr<ModuleManager, pybind11::nodelete>> module_manager(m,
-                                                                                                     "ModuleManager");
+  pybind11::class_<ModuleManager> module_manager(m, "ModuleManager");
 
   module_manager.doc() = R"(
     Manager for all dynamically loaded SCINE modules
@@ -53,13 +57,12 @@ void init_module_manager(pybind11::module& m) {
     loads these shared libraries and makes the models it provides available
     through the query interface present here.
 
-    This class is a singleton, accessible via a default ``__init__`` method:
+    This class is a singleton:
 
-    >>> m = core.ModuleManager()
+    >>> m = core.ModuleManager.get_instance()
   )";
 
-  module_manager.def(
-      pybind11::init([]() { return std::unique_ptr<ModuleManager, pybind11::nodelete>(&ModuleManager::getInstance()); }));
+  module_manager.def("get_instance", &ModuleManager::getInstance, pybind11::return_value_policy::reference, "");
 
   module_manager.def("load", &module_manager_load, pybind11::arg("filename"),
                      R"(
@@ -67,6 +70,10 @@ void init_module_manager(pybind11::module& m) {
 
       SCINE Module files have the suffix ``.module.so`` to clearly disambiguate
       them from general-purpose shared libraries.
+    )");
+  module_manager.def("load_module", &module_manager_load_module, pybind11::arg("module"),
+                     R"(
+      Load a module object directly.
     )");
 
   module_manager.def_property_readonly("modules", &ModuleManager::getLoadedModuleNames, "List of loaded module names");
@@ -88,7 +95,7 @@ void init_module_manager(pybind11::module& m) {
       :returns: List of string names of models of the interface argument. You
         can use these as arguments to the ``get`` function.
 
-      >>> m = core.ModuleManager()
+      >>> m = core.ModuleManager.get_instance()
       >>> m.models(core.Calculator.INTERFACE)
       ['TEST', 'LENNARDJONES']
     )");
@@ -101,7 +108,7 @@ void init_module_manager(pybind11::module& m) {
       :param model: String name of the model of the interface to check for
       :returns: Whether the model is available
 
-      >>> m = core.ModuleManager()
+      >>> m = core.ModuleManager.get_instance()
       >>> m.has(core.Calculator.INTERFACE, "PM6") # If Sparrow is not loaded
       False
     )");
@@ -113,7 +120,7 @@ void init_module_manager(pybind11::module& m) {
       :param module: Name of the module to check for
       :returns: Whether the module is loaded
 
-      >>> m = core.ModuleManager()
+      >>> m = core.ModuleManager.get_instance()
       >>> m.module_loaded("Sparrow")
       False
     )");
@@ -126,7 +133,7 @@ void init_module_manager(pybind11::module& m) {
       :param model: String name of the model of the interface to check for
       :returns: The model if available, ``None`` otherwise
 
-      >>> m = core.ModuleManager()
+      >>> m = core.ModuleManager.get_instance()
       >>> m.get(core.Calculator.INTERFACE, "PM6") # if Sparrow is not loaded
     )");
 }

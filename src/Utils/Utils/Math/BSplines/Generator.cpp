@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -14,12 +14,12 @@ namespace Utils {
 namespace BSplines {
 
 /* Constructor for ControlPolygonGenerator and InterpolationGenerator */
-Generator::Generator(const Eigen::MatrixXd& dataPoints, int splineDegree)
+Generator::Generator(const Eigen::Ref<const Eigen::MatrixXd>& dataPoints, int splineDegree)
   : Generator(dataPoints, static_cast<int>(dataPoints.rows()), splineDegree) {
 }
 
 /* Constructor for BSplineFromPenalizedLeastSquaresFit Methods */
-Generator::Generator(const Eigen::MatrixXd& dataPoints, int numberOfControlPoints, int splineDegree)
+Generator::Generator(const Eigen::Ref<const Eigen::MatrixXd>& dataPoints, int numberOfControlPoints, int splineDegree)
   : dataPoints_(dataPoints),
     p_(splineDegree),
     dim_(static_cast<int>(dataPoints.cols())),

@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -21,15 +21,18 @@ class TurbomoleHelper {
   TurbomoleHelper(std::string& calculationDirectory, std::string& turbomoleExecutableBase);
   /**
    * @brief Checks if a job was successful.
+   *
+   * @param out The name of the stream.
+   * @param phrase The phrase to look for in the stream.
    */
-  bool jobWasSuccessful(std::istream& out);
+  bool jobWasSuccessful(std::istream& out, std::string phrase = "(ended normally)");
   /**
    * @brief Helper function to execute any Turbomole process.
    *
    * @param binaryName The name of the binary.
    * @param outputToFile Whether the output should be printed to a file.
    */
-  void execute(std::string binaryName, bool outputToFile);
+  void execute(std::string binaryName, bool outputToFile, std::string outputFileName = "");
   /**
    * @brief Helper function to execute a Turbomole process that requires a stdin.
    */
@@ -62,6 +65,7 @@ class TurbomoleHelper {
                                                                            {"camb3lyp", "cam-b3lyp"},
                                                                            {"bvwn", "b-vwn"},
                                                                            {"bp", "b-p"},
+                                                                           {"bp86", "b-p"},
                                                                            {"bhlyp", "bh-lyp"},
                                                                            {"m06l", "m06-l"},
                                                                            {"b97d", "b97-d"},

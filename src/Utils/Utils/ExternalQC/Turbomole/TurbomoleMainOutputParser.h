@@ -1,12 +1,13 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 #ifndef UTILS_EXTERNALQC_TURBOMOLEMAINOUTPUTPARSER_H
 #define UTILS_EXTERNALQC_TURBOMOLEMAINOUTPUTPARSER_H
 
+#include <Core/Log.h>
 #include <Utils/ExternalQC/Turbomole/TurbomoleFiles.h>
 #include <Utils/Typenames.h>
 #include <string>
@@ -32,12 +33,18 @@ class TurbomoleMainOutputParser {
    * @brief Parse the Turbomole output for errors, it is expected to do nothing if no error is present
    * @throws OutputFileParsingError if error is present
    */
-  void checkForErrors() const;
+  void checkForErrors(Core::Log& log) const;
   /**
    * @brief Parse the energy from the Turbomole output.
    * @return The energy as a double.
    */
   double getEnergy() const;
+  /**
+   * @brief Parse the energy of the excited state specified from the Turbomole output.
+   * @param state The index of the excited state queried (the first excited state has index 1).
+   * @return The energy of the excited state as a double.
+   */
+  double getExcitedStateEnergy(int state) const;
   /**
    * @brief Parse the Mayer bond orders from the Turbomole output.
    * @return The Utils::BondOrderCollection.
@@ -53,6 +60,11 @@ class TurbomoleMainOutputParser {
    * @return The number of atoms.
    */
   int getNumberAtoms() const;
+  /**
+   * @brief Parse the number of environment point charges from the Turbomole input with a nonzero charge.
+   * @return The number of point charges.
+   */
+  int getNumberOfNonZeroPointCharges() const;
   /**
    * @brief Parse the gradients from the Turbomole output.
    * @return GradientCollection

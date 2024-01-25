@@ -1,7 +1,7 @@
 /**
  * @file
  * @copyright This code is licensed under the 3-clause BSD license.\n
- *            Copyright ETH Zurich, Laboratory of Physical Chemistry, Reiher Group.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
 
@@ -34,13 +34,13 @@ void GaussianOrbitalWriter::updateCheckpointFile(const std::string& chkFileBase,
 
 void GaussianOrbitalWriter::openInFile(const std::string& file) {
   fchkin_.open(file);
-  if (fchkin_.fail() | fchkin_.bad())
+  if (fchkin_.fail() || fchkin_.bad())
     throw std::runtime_error("Could not open " + file);
 }
 
 void GaussianOrbitalWriter::openOutFile(const std::string& file) {
   fchkout_.open(file);
-  if (fchkout_.fail() | fchkout_.bad())
+  if (fchkout_.fail() || fchkout_.bad())
     throw std::runtime_error("Could not open " + file);
 }
 

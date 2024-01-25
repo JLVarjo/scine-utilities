@@ -1,16 +1,23 @@
+/**
+ * @file
+ * @copyright This code is licensed under the 3-clause BSD license.\n
+ *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
+ *            See LICENSE.txt for details.
+ */
+
 #ifndef UTILS_MSVCCOMPATIBILITY_H
 #define UTILS_MSVCCOMPATIBILITY_H
 
 #include <iso646.h>
 #include <array>
-#include <numeric>
 #include <fstream>
+#include <numeric>
 
 #define _USE_MATH_DEFINES
 #include <cmath>
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+#  define M_PI 3.14159265358979323846
 #endif
 
 inline void SetEnv_(std::string p_Tag, std::string p_Value) {
