@@ -13,7 +13,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "../MSVCCompatibility.h"
 
 namespace Scine {
 namespace Utils {

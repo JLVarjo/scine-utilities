@@ -6,7 +6,7 @@
  */
 #include "Utils/GeometricDerivatives/NumericalHessianCalculator.h"
 #include "Utils/GeometryOptimization/IrcOptimizer.h"
-#include "Utils/MSVCCompatibility.h"
+#include <Utils/MSVCCompatibility.h>
 #include <Core/Interfaces/Calculator.h>
 #include <Utils/CalculatorBasics.h>
 #include <Utils/Math/AutomaticDifferentiation/AutomaticDifferentiationHelpers.h>
@@ -17,7 +17,6 @@
 #include <gmock/gmock.h>
 #include <omp.h>
 #include <vector>
-#include "../../Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {

@@ -18,7 +18,6 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <cmath>
-#include "../../MSVCCompatibility.h"
 
 namespace Scine {
 namespace Utils {

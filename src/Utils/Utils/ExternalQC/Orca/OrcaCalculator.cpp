@@ -20,6 +20,7 @@
 #include "Utils/Scf/LcaoUtils/SpinMode.h"
 #include "Utils/Solvation/ImplicitSolvation.h"
 #include <boost/process.hpp>
+#include <boost/filesystem.hpp>
 #include <regex>
 
 namespace bp = boost::process;

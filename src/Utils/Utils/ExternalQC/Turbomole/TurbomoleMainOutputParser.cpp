@@ -17,7 +17,6 @@
 #include <fstream>
 #include <iterator>
 #include <regex>
-#include "../../MSVCCompatibility.h"
 
 namespace Scine {
 namespace Utils {

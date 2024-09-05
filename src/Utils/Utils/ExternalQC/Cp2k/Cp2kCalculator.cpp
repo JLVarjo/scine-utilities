@@ -18,6 +18,7 @@
 #include "Utils/Scf/LcaoUtils/SpinMode.h"
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/process.hpp>
+#include <boost/filesystem.hpp>
 #include <regex>
 
 namespace bp = boost::process;

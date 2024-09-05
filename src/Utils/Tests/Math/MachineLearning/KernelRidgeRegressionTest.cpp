@@ -5,11 +5,10 @@
  *            See LICENSE.txt for details.
  */
 
-#include "Utils/MSVCCompatibility.h"
+#include <Utils/MSVCCompatibility.h>
 #include <Utils/Math/MachineLearning/CrossValidation.h>
 #include <Utils/Math/MachineLearning/Regression/KernelRidgeRegression.h>
 #include <gmock/gmock.h>
-#include "../Utils/Utils/MSVCCompatibility.h"
 
 namespace Scine {
 namespace Utils {

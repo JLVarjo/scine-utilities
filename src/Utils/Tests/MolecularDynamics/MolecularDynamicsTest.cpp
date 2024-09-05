@@ -4,7 +4,7 @@
  *            Copyright ETH Zurich, Department of Chemistry and Applied Biosciences, Reiher Group.\n
  *            See LICENSE.txt for details.
  */
-#include "Utils/MSVCCompatibility.h"
+#include <Utils/MSVCCompatibility.h>
 #include <Core/Interfaces/Calculator.h>
 #include <Core/Interfaces/CalculatorWithReference.h>
 #include <Core/Log.h>
@@ -20,7 +20,6 @@
 #include <Eigen/Geometry>
 #include <functional>
 #include <random>
-#include "../../Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {

@@ -5,7 +5,7 @@
  *            See LICENSE.txt for details.
  */
 
-#include "Utils/MSVCCompatibility.h"
+#include <Utils/MSVCCompatibility.h>
 #include <Utils/GeometricDerivatives/NormalModeAnalysis.h>
 #include <Utils/GeometricDerivatives/NormalModesContainer.h>
 #include <Utils/Geometry/AtomCollection.h>
@@ -13,7 +13,6 @@
 #include <Utils/MolecularTrajectory.h>
 #include <gmock/gmock.h>
 #include <cmath>
-#include "../Utils/Utils/MSVCCompatibility.h"
 
 using namespace testing;
 namespace Scine {

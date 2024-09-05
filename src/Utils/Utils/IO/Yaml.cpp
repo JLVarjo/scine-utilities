@@ -17,7 +17,6 @@
 #include <boost/fusion/include/std_tuple.hpp>
 #include <boost/optional.hpp>
 #include <cmath>
-#include "../MSVCCompatibility.h"
 
 namespace Scine {
 namespace Utils {

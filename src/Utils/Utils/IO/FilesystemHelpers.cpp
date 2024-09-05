@@ -52,7 +52,7 @@ void FilesystemHelpers::copyFile(const std::string& from, const std::string& to)
   boostfs::path toFile{to};
 
   try {
-    boostfs::copy_file(fromFile, toFile, boostfs::copy_option::overwrite_if_exists);
+    boostfs::copy_file(fromFile, toFile, boostfs::copy_options::overwrite_existing);
   }
   catch (std::exception&) {
     throw std::runtime_error("Could not copy the file \"" + fromFile.string() + "\" to \"" + toFile.string() + "\".");

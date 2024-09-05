@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/process.hpp>
-#include "../Utils/Utils/MSVCCompatibility.h"
+#include <boost/filesystem.hpp>
 
 namespace bp = boost::process;
 namespace bfs = boost::filesystem;
@@ -87,7 +87,7 @@ void TurbomoleCalculator::initializeProgram() {
     turbomoleSmpBinaryDir_ = NativeFilenames::combinePathSegments(turboRootEnv, "bin", smpArchitecture);
     turbomoleScriptsDir_ = NativeFilenames::combinePathSegments(turboRootEnv, "scripts");
     std::string newPath = turbomoleScriptsDir_ + ":" + std::getenv("PATH");
-    setenv("PATH", newPath.c_str(), 1);
+    SetEnv_("PATH", newPath.c_str());
     binaryHasBeenChecked_ = true;
   }
   else
